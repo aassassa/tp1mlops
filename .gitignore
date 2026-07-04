@@ -1,0 +1,12 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+qdrant_storage/
+data/uploads/
+.DS_Store
+.env
+mlruns/
+.dvc/tmp/
+.dvc/cache/
+.venv_corrupted/
