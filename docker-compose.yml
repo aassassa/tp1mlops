@@ -8,10 +8,9 @@ services:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - ./qdrant_storage:/qdrant/storage
+      - qdrant_data:/qdrant/storage
     restart: always
 
-  # Optionnel : MLflow pour le tracking d'expériences
   mlflow:
     image: ghcr.io/mlflow/mlflow:v2.11.3
     container_name: mlflow_server
@@ -21,3 +20,61 @@ services:
     volumes:
       - ./mlruns:/mlflow/mlruns
     restart: always
+
+  db:
+    image: postgres:16-alpine
+    container_name: langfuse_postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  langfuse:
+    image: langfuse/langfuse:2
+    container_name: langfuse_server
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+      - NEXTAUTH_SECRET=my-nextauth-secret-key-12345
+      - SALT=my-salt-secret-key-12345
+      - NEXTAUTH_URL=http://localhost:3000
+      - TELEMETRY_ENABLED=false
+
+  chatbot:
+    build: .
+    container_name: chatbot_api
+    restart: always
+    depends_on:
+      - qdrant
+      - langfuse
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+      - ./tests:/app/tests
+    environment:
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - COLLECTION_NAME=enterprise_documents
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - LLM_MODEL=llama3.2:1b
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - LANGFUSE_HOST=http://langfuse:3000
+      - LANGFUSE_PUBLIC_KEY=pk-lf-909f19cb-aeec-45f2-8e37-0f87f09250a1
+      - LANGFUSE_SECRET_KEY=sk-lf-9f8c2235-fb7e-4212-a684-2416b40a31e0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  qdrant_data:
+  postgres_data:

@@ -1,0 +1,45 @@
+\chapter*{Introduction Générale}
+\addcontentsline{toc}{chapter}{Introduction Générale}
+\label{chap:introduction}
+
+\section*{Contexte Général du Stage}
+Dans le cadre de notre formation d'Ingénieur en Informatique, spécialité Intelligence Artificielle et Science des Données, nous avons effectué notre Projet de Fin d'Année (PFA) d'une durée de 2 mois au sein de l'entreprise OWL Media.
+
+Ces dernières années ont été marquées par l'essor spectaculaire de l'intelligence artificielle générative et des grands modèles de langage (\textit{Large Language Models} - LLM). Si ces modèles démontrent des capacités impressionnantes pour la compréhension du langage naturel, leur déploiement en milieu professionnel se heurte à des limites majeures : les risques d'hallucinations factuelles, l'absence d'accès aux connaissances privées d'entreprise et l'impossibilité d'envoyer des données confidentielles vers des APIs cloud tierces.
+
+Aujourd'hui, les organisations cherchent à exploiter leur patrimoine documentaire interne (politiques RH, chartes informatiques, guides de projets) de manière fiable, souveraine et sécurisée. C'est dans ce contexte que s'inscrit notre projet au sein d'OWL Media, entreprise spécialisée dans la création de contenus et la gestion de projets média, où nous avons travaillé sur la conception et la mise en œuvre d'une plateforme d'IA souveraine s'appuyant sur l'architecture RAG (\textit{Retrieval-Augmented Generation}) couplée à une démarche MLOps.
+
+\section*{Problématique}
+Au sein d'OWL Media, la recherche manuelle d'informations dans des documents dispersés génère des pertes de temps et des erreurs d'interprétation. De plus, l'utilisation directe de modèles de langage sans contrôle pose des problèmes de fiabilité et de traçabilité des réponses.
+
+Face à ces enjeux, la problématique centrale de notre travail s'énonce sous la forme de la question suivante :
+
+\begin{quote}
+\textit{« Comment concevoir et déployer une plateforme RAG souveraine capable d'interroger des documents d'entreprise en langage naturel tout en garantissant la fiabilité des réponses, l'absence d'hallucinations et une observabilité MLOps complète en production ? »}
+\end{quote}
+
+\section*{Objectifs du Stage}
+L'objectif général de ce projet PFA est de concevoir, développer et évaluer une plateforme RAG Enterprise complète 100\% locale, intégrant une couche d'observabilité et de monitoring MLOps.
+
+Pour atteindre cet objectif global, le travail a été découpé en plusieurs objectifs spécifiques :
+\begin{itemize}
+    \item \textbf{Ingestion documentaire} : Mettre en place un pipeline automatique d'extraction, de découpage sémantique (\textit{chunking}), de génération d'embeddings et d'indexation dans la base vectorielle Qdrant.
+    \item \textbf{Stratégies de recherche avancées} : Implémenter différentes méthodes de recherche (vectorielle sémantique, mots-clés BM25 et hybride).
+    \item \textbf{Réordonnancement fin (Reranking)} : Intégrer un modèle Cross-Encoder pour affiner le classement des fragments de documents restitués.
+    \item \textbf{Sécurité anti-hallucination} : Développer un mécanisme d'évaluation du contexte et de filtrage par seuil pour garantir l'exactitude des réponses générées.
+    \item \textbf{Monitoring et observabilité MLOps} : Concevoir un système de traçabilité sémantique (\textit{RAG Trace}), de suivi des latences (P50/P95) et de journalisation des événements dans une base SQLite dédiée.
+    \item \textbf{Évaluation automatique} : Mettre en place un module d'évaluation automatisé calculant les métriques RAG (\textit{Faithfulness}, \textit{Answer Relevance}, \textit{Answer Correctness}, \textit{Context Precision/Recall}) avec suivi MLflow et versionnement DVC.
+    \item \textbf{Dashboard d'administration} : Concevoir une interface web claire et professionnelle pour le chatbot et le suivi des performances système en temps réel.
+\end{itemize}
+
+\section*{Organisation du Rapport}
+Le présent rapport est structuré en six chapitres organisés comme suit :
+
+\begin{itemize}
+    \item \textbf{Chapitre 1 : Contexte général du projet} — Présente l'organisme d'accueil OWL Media, le contexte du sujet, la problématique, les objectifs ainsi que la méthodologie Agile/Scrum adoptée.
+    \item \textbf{Chapitre 2 : État de l'art et étude théorique} — Dresse une synthèse de la littérature sur les LLM, l'architecture RAG, les bases vectorielles, les stratégies de recherche, le Reranking et le MLOps.
+    \item \textbf{Chapitre 3 : Analyse et spécification des besoins} — Détaille l'étude de l'existant, la critique, la spécification des besoins fonctionnels et non fonctionnels, ainsi que les diagrammes de cas d'utilisation UML.
+    \item \textbf{Chapitre 4 : Conception de la solution} — Expose l'architecture globale conteneurisée (Docker Compose), la conception détaillée des pipelines d'ingestion, de retrieval et MLOps, ainsi que les diagrammes de classe, de séquence et de déploiement.
+    \item \textbf{Chapitre 5 : Réalisation et implémentation} — Décrit les choix matériels/logiciels, le développement de l'API FastAPI, l'intégration des modèles locaux, l'interface web épurée et la validation des tests.
+    \item \textbf{Chapitre 6 : Résultats et évaluation} — Analyse les résultats quantitatifs obtenus sur le jeu de données de référence via les métriques de pertinence et de latence, puis discute des perspectives d'évolution.
+\end{itemize}

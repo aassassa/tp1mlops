@@ -15,6 +15,7 @@ ragas>=0.1.6
 streamlit>=1.32.2
 pytest>=8.1.1
 pandas>=2.2.1
-langfuse>=2.20.0
+langfuse==2.53.0
 pymupdf>=1.23.26
 python-docx>=1.1.0
+rank_bm25>=0.2.2

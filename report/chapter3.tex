@@ -1,0 +1,194 @@
+\chapter{Analyse et Spécification des Besoins}
+\label{chap:analyse_besoins}
+
+\section{Introduction}
+Après avoir posé l'état de l'art et les bases théoriques dans le chapitre précédent, ce troisième chapitre est consacré à l'analyse concrète et à la spécification formelle des besoins du système \textbf{Owl Media RAG MLOps}. 
+
+L'objectif est de passer du cadre théorique aux exigences opérationnelles de l'entreprise Owl Media. Nous commençons par une étude et une critique de l'existant documentaire, suivies du recueil rigoureux des besoins fonctionnels et non fonctionnels. Enfin, nous identifions les acteurs du système et modélisons leurs interactions via les diagrammes de cas d'utilisation UML et leurs fiches descriptives détaillées.
+
+\section{Étude de l'Existant}
+
+\subsection{Situation Interne Avant le Projet}
+Avant la mise en place de la plateforme Owl Media RAG MLOps, la gestion et la consultation des documents internes (politiques RH, chartes de sécurité informatique, guides de projets) s'effectuaient de manière décentralisée. Les collaborateurs devaient rechercher manuellement les informations dans des dossiers partagés ou exécuter des recherches lexicales simples (type \texttt{Ctrl+F}) au sein de fichiers PDF ou Microsoft Word.
+
+Cette approche traditionnelle présentait plusieurs lacunes majeures :
+\begin{itemize}
+    \item \textbf{Perte de temps importante} : Les collaborateurs consacraient plusieurs dizaines de minutes par jour à chercher l'information exacte.
+    \item \textbf{Information fragmentée} : Risque de consulter une version obsolète d'un document RH ou technique.
+    \item \textbf{Absence d'interface en langage naturel} : Impossibilité d'obtenir une réponse synthétique directe à une question spécifique sans lire le document complet.
+\end{itemize}
+
+\subsection{Analyse des Solutions du Marché}
+Pour répondre aux besoins de recherche documentaire intelligente, plusieurs solutions commerciales RAG ou assistants IA existent sur le marché (Glean, Notion AI, Microsoft Copilot, ChatGPT Enterprise). Le tableau~\ref{tab:comparatif_existant} dresse une comparaison entre ces offres et les besoins d'Owl Media.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Tableau comparatif des solutions existantes sur le marché}
+\label{tab:comparatif_existant}
+\begin{tabular}{|p{2.2cm}|p{1.8cm}|p{2.0cm}|p{1.6cm}|p{2.2cm}|p{3.2cm}|}
+\hline
+\textbf{Solution} & \textbf{Souveraineté} & \textbf{Recherche Hybride} & \textbf{Reranking} & \textbf{MLOps \& Traces} & \textbf{Limites majeures} \\ \hline
+\textbf{ChatGPT Enterprise} & Non (Cloud) & Oui (Interne) & Inconnu & Limité & Données envoyées hors réseau privé, coût élevé. \\ \hline
+\textbf{Microsoft Copilot} & Non (Cloud) & Oui & Propriétaire & Limité & Dépendance complète à l'écosystème Microsoft 365. \\ \hline
+\textbf{Notion AI} & Non (Cloud) & Basique & Non & Non & Limité au format Notion, hébergement SaaS externe. \\ \hline
+\textbf{Owl Media RAG} & \textbf{Oui (100\% Local)} & \textbf{Oui (Vector+BM25)} & \textbf{Oui (Cross-Encoder)} & \textbf{Complet (SQLite/MLflow/Langfuse)} & \textbf{Solution développée et personnalisée.} \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Critique de l'Existant}
+L'analyse des solutions existantes et du mode de fonctionnement initial met en évidence cinq faiblesses critiques :
+\begin{enumerate}
+    \item \textbf{Limites de Souveraineté et de Confidentialité} : L'envoi de documents internes sensibles (chartes de sécurité, stratégies clients) vers des API SaaS distantes enfreint la politique de sécurité d'Owl Media.
+    \item \textbf{Risque d'Hallucination} : Les outils génériques du marché ne possèdent aucun mécanisme strict de court-circuit en cas de contexte insuffisant, risquant de fournir des réponses fausses.
+    \item \textbf{Absence de Recherche Hybride et Reranking Personnalisables} : Les solutions grand public se limitent souvent à une recherche sémantique simple, échouant sur les requêtes contenant des termes techniques ou codes exacts.
+    \item \textbf{Absence d'Observabilité et de MLOps} : Impossibilité pour les administrateurs de suivre les latences décomposées (P50/P95), d'auditer le parcours des requêtes (\texttt{query\_id}) ou d'évaluer la fidélité des réponses.
+    \item \textbf{Dépendance et Coûts Récurrents} : Les modèles économiques SaaS basés sur des abonnements par utilisateur deviennent très onéreux à l'échelle de l'entreprise.
+\end{enumerate}
+
+Ces limites légitiment la conception et le développement d'une plateforme RAG souveraine, locale et instrumentée par une couche MLOps complète.
+
+\section{Spécification des Besoins Fonctionnels}
+Les besoins fonctionnels décrivent les actions et services que le système doit fournir. Ils sont regroupés par volets applicatifs dans le tableau~\ref{tab:besoins_fonctionnels}.
+
+\begin{table}[htbp]
+\centering
+\caption{Spécification des besoins fonctionnels du système}
+\label{tab:besoins_fonctionnels}
+\small
+\begin{tabular}{|p{1.5cm}|p{2.5cm}|p{9.5cm}|}
+\hline
+\textbf{Réf} & \textbf{Module} & \textbf{Description du Besoin Fonctionnel} \\ \hline
+\textbf{BF01} & Ingestion & Permettre à l'administrateur d'uploader des documents (PDF, DOCX, TXT). \\ \hline
+\textbf{BF02} & Ingestion & Extraire automatiquement le texte et effectuer un découpage sémantique en chunks. \\ \hline
+\textbf{BF03} & Ingestion & Générer les embeddings et indexer les fragments dans Qdrant avec élimination des doublons. \\ \hline
+\textbf{BF04} & Ingestion & Offrir une fonction de re-indexation globale de la base documentaire. \\ \hline
+\textbf{BF05} & Recherche & Permettre à l'utilisateur de poser des questions en langage naturel. \\ \hline
+\textbf{BF06} & Recherche & Effectuer une recherche Hybride (combinaison Vectorielle + BM25). \\ \hline
+\textbf{BF07} & Recherche & Réordonner les résultats candidats à l'aide d'un Cross-Encoder Reranker. \\ \hline
+\textbf{BF08} & Génération & Appliquer un seuil de pertinence ($0.30$) anti-hallucination pour refuser de répondre si aucun document n'est pertinent. \\ \hline
+\textbf{BF09} & Génération & Synthetiser une réponse exacte accompagnée des sources et extraits de documents. \\ \hline
+\textbf{BF10} & MLOps & Attribuer un \texttt{query\_id} unique à chaque requête et enregistrer les métriques de latence dans SQLite. \\ \hline
+\textbf{BF11} & MLOps & Proposer un dashboard d'administration affichant les cartes KPI, les graphiques de latence P50/P95 et les Live Logs. \\ \hline
+\textbf{BF12} & MLOps & Offrir un \textit{Trace Explorer} pour inspecter le parcours d'une requête spécifique. \\ \hline
+\textbf{BF13} & MLOps & Intégrer les liens d'accès direct aux interfaces Langfuse (traces LLM) et MLflow (expériences). \\ \hline
+\textbf{BF14} & Évaluation & Automatiser l'évaluation des métriques RAG (\textit{Faithfulness}, \textit{Relevance}, \textit{Correctness}) sur le dataset de test. \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Spécification des Besoins Non-Fonctionnels}
+Les besoins non-fonctionnels définissent les exigences de qualité, de performance et de contraintes techniques du système (tableau~\ref{tab:besoins_non_fonctionnels}).
+
+\begin{table}[htbp]
+\centering
+\caption{Spécification des besoins non-fonctionnels}
+\label{tab:besoins_non_fonctionnels}
+\small
+\begin{tabular}{|p{1.5cm}|p{2.5cm}|p{9.5cm}|}
+\hline
+\textbf{Réf} & \textbf{Critère} & \textbf{Description de l'Exigence Non-Fonctionnelle} \\ \hline
+\textbf{BNF01} & \textbf{Souveraineté} & Traitement 100\% local sous Docker Compose sans aucun appel vers une API externe cloud. \\ \hline
+\textbf{BNF02} & \textbf{Performance} & Latence de génération locale contenue et prédictible (inférieure à 15-20s pour la synthèse complète). \\ \hline
+\textbf{BNF03} & \textbf{Fiabilité} & Garantie anti-hallucination par filtrage strict des passages non pertinents. \\ \hline
+\textbf{BNF04} & \textbf{Observabilité} & Traçabilité intégrale de chaque requête (\texttt{query\_id}, latences décomposées, logs en direct). \\ \hline
+\textbf{BNF05} & \textbf{Utilisabilité} & Interface web fluide, sobre, épurée et responsive adaptée aux collaborateurs d'Owl Media. \\ \hline
+\textbf{BNF06} & \textbf{Portabilité} & Déploiement multi-conteneurs conteneurisé et reproductible via Docker Compose. \\ \hline
+\textbf{BNF07} & \textbf{Maintenabilité} & Architecture modulaire en couche (FastAPI, Qdrant, Ollama, SQLite, Langfuse, MLflow). \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Identification des Acteurs}
+Le système distingue deux acteurs principaux interconnectés (tableau~\ref{tab:acteurs_systeme}).
+
+\begin{table}[htbp]
+\centering
+\caption{Identification des acteurs du système}
+\label{tab:acteurs_systeme}
+\small
+\begin{tabular}{|p{3.0cm}|p{5.0cm}|p{5.5cm}|}
+\hline
+\textbf{Acteur} & \textbf{Rôle et Description} & \textbf{Cas d'Utilisation Associés} \\ \hline
+\textbf{User (Collaborateur)} & Utilisateur final d'Owl Media souhaitant interroger la base documentaire d'entreprise. & Discuter avec le Chatbot, Consulter les sources, Consulter l'historique. \\ \hline
+\textbf{Admin (Administrateur)} & Administrateur système / Ingénieur MLOps ayant un accès privilégié (hérite du rôle User). & Importer/Supprimer des documents, Lancer l'ingestion, Visualiser les statistiques, Suivre MLflow, Auditer Langfuse. \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Diagramme de Cas d'Utilisation (UML)}
+
+\subsection{Diagramme de Cas d'Utilisation Global}
+La figure~\ref{fig:usecase_diagram} présente le diagramme UML des cas d'utilisation de la plateforme. L'acteur \textbf{Admin} spécialise l'acteur \textbf{User} (héritage), lui permettant d'exécuter l'ensemble des cas d'utilisation utilisateur en plus de ses privilèges de gestion et de monitoring MLOps. Tous les cas d'utilisation incluent obligatoirement la relation \texttt{<<include>>} vers le cas d'utilisation \textbf{S'authentifier}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{usecase_diagram.png}
+    \caption{Diagramme UML de cas d'utilisation global de la plateforme Owl Media RAG MLOps}
+    \label{fig:usecase_diagram}
+\end{figure}
+
+\subsection{Fiches Descriptives des Cas d'Utilisation Clés}
+Pour préciser la dynamique d'exécution, nous détaillons les fiches descriptives des cas d'utilisation principaux.
+
+\paragraph{Fiche CU01 : Discuter avec le Chatbot}
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{|p{3.2cm}|p{10.3cm}|}
+\hline
+\textbf{Nom du Cas} & \textbf{CU01 : Discuter avec le Chatbot et consulter les sources} \\ \hline
+\textbf{Acteur Principal} & User (Collaborateur Owl Media) \\ \hline
+\textbf{Préconditions} & L'utilisateur est authentifié et des documents sont indexés dans Qdrant. \\ \hline
+\textbf{Scénario Nominal} & 
+1. L'utilisateur saisit sa question en langage naturel dans l'interface du chatbot.\\
+2. Le système interroge le moteur de recherche Hybride (Vector + BM25).\\
+3. Le Cross-Encoder réordonne les candidats extraits.\\
+4. Le filtre vérifie que le score de pertinence est supérieur au seuil ($0.30$).\\
+5. Le LLM local (Llama 3.2 1B) génère la réponse à partir du contexte.\\
+6. L'interface affiche la réponse ainsi que le volet dépliable des sources utilisées. \\ \hline
+\textbf{Scénario Alternatif} & Si aucun document ne dépasse le seuil de pertinence ($0.30$), le système répond immédiatement que l'information n'est pas disponible sans solliciter le LLM. \\ \hline
+\textbf{Postconditions} & La requête est enregistrée dans SQLite avec son \texttt{query\_id} et sa trace MLOps. \\ \hline
+\end{tabular}
+\end{table}
+
+\paragraph{Fiche CU02 : Importer des documents et lancer l'ingestion}
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{|p{3.2cm}|p{10.3cm}|}
+\hline
+\textbf{Nom du Cas} & \textbf{CU02 : Importer des documents et lancer l'ingestion automatique} \\ \hline
+\textbf{Acteur Principal} & Admin (Administrateur MLOps) \\ \hline
+\textbf{Préconditions} & L'administrateur est connecté avec le rôle \texttt{admin}. \\ \hline
+\textbf{Scénario Nominal} & 
+1. L'administrateur sélectionne un fichier (PDF, DOCX, TXT) depuis l'onglet Data \& Ingestion.\\
+2. Le backend FastAPI enregistre le fichier dans \texttt{data/raw/}.\\
+3. Le pipeline extrait le texte brut et applique le découpage sémantique en chunks.\\
+4. Les embeddings sont générés via \texttt{nomic-embed-text}.\\
+5. Les points vectoriels sont indexés dans la collection Qdrant avec dédoublonnage.\\
+6. L'interface met à jour en temps réel le nombre de documents et de chunks indexés. \\ \hline
+\textbf{Postconditions} & La base vectorielle Qdrant est mise à jour et prête pour le retrieval. \\ \hline
+\end{tabular}
+\end{table}
+
+\paragraph{Fiche CU03 : Auditer les traces Langfuse et suivre MLflow}
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{|p{3.2cm}|p{10.3cm}|}
+\hline
+\textbf{Nom du Cas} & \textbf{CU03 : Auditer les traces Langfuse et suivre les métriques MLflow} \\ \hline
+\textbf{Acteur Principal} & Admin (Administrateur MLOps) \\ \hline
+\textbf{Préconditions} & Les conteneurs Langfuse et MLflow sont actifs sous Docker Compose. \\ \hline
+\textbf{Scénario Nominal} & 
+1. L'administrateur accède à l'onglet Monitoring MLOps.\\
+2. Il consulte les cartes KPI (Total queries, Success rate, Latences P50/P95, No context rate).\\
+3. Il clique sur le bouton "Ouvrir Langfuse" pour explorer l'arbre des traces LLM.\\
+4. Il clique sur "Ouvrir MLflow" pour comparer les runs d'évaluation RAG.\\
+5. Il utilise le \textit{Trace Explorer} avec un \texttt{query\_id} pour visualiser l'exécution détaillée. \\ \hline
+\textbf{Postconditions} & L'administrateur dispose d'une visibilité complète sur la qualité et les latences. \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Conclusion}
+Ce chapitre d'analyse et de spécification des besoins a permis de poser le cadrage fonctionnel et technique du projet. Nous avons mis en évidence les limites de la situation initiale et des offres du marché, spécifié la totalité des exigences fonctionnelles (BF01-BF14) et non-fonctionnelles (BNF01-BNF07), puis modélisé formellement les acteurs et cas d'utilisation à l'aide des diagrammes UML et de fiches détaillées.
+
+Le chapitre suivant sera consacré à la \textbf{Conception de la solution}, où nous présenterons l'architecture technique globale, la modélisation des composants et les diagrammes de séquence et de classe UML.

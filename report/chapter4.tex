@@ -1,0 +1,285 @@
+\chapter{Conception de la Solution}
+\label{chap:conception}
+\renewcommand{\labelitemi}{$\bullet$}
+
+\section{Introduction}
+Après avoir analysé l'existant et spécifié l'ensemble des besoins fonctionnels et non fonctionnels dans le chapitre précédent, ce quatrième chapitre est consacré à la conception détaillée de la plateforme souveraine \textbf{Owl Media RAG MLOps}. 
+
+L'objectif de ce chapitre est de passer des exigences opérationnelles aux choix d'architecture logicielle et de modélisation technique. Nous présentons l'architecture globale conteneurisée du système, la conception détaillée de chacun de ses modules (ingestion, retrieval hybride, reranking, anti-hallucination, génération LLM et couche MLOps), ainsi que la modélisation UML complète (diagrammes de séquence, de classes et de déploiement). Enfin, nous synthétisons et justifions les choix technologiques retenus face aux alternatives de l'état de l'art.
+
+\section{Architecture Globale du Système}
+
+\subsection{Vue d'Ensemble du Flux de Traitement}
+La plateforme Owl Media RAG MLOps repose sur une architecture modulaire distribuée en couches, entièrement conteneurisée. Le système assure le traitement complet d'une requête utilisateur depuis son émission sur le dashboard web jusqu'à la synthèse d'une réponse certifiée avec traçabilité MLOps.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{schema_architecture_globale.png}
+    \caption{Architecture globale et flux de données de la plateforme Owl Media RAG MLOps}
+    \label{fig:architecture_globale}
+\end{figure}
+
+Comme illustré par la figure~\ref{fig:architecture_globale}, le flux d'exécution s'articule autour de cinq grandes couches fonctionnelles :
+\begin{enumerate}
+    \item \textbf{Couche Présentation (Frontend UI)} : Dashboard web épuré développé en HTML/CSS/JS (SPA), offrant l'interface de conversation Chatbot, le panneau d'administration documentaire et le tableau de bord de monitoring MLOps.
+    \item \textbf{Couche Backend \& Orchestration (FastAPI)} : Service API REST central sous FastAPI assurant le routage des requêtes, le contrôle d'accès par rôle (RBAC), et l'orchestration asynchrone des pipelines.
+    \item \textbf{Couche Retrieval \& Reranking} : Moteur de recherche hybride combinant la base vectorielle Qdrant (recherche dense sémantique), l'index local BM25 (recherche sparse par mots-clés) et le modèle Cross-Encoder (\textit{Reranker}).
+    \item \textbf{Couche Génération LLM Local (Ollama)} : Moteur d'inférence autonome exécutant le modèle local \texttt{llama3.2:1b} sans aucune dépendance vers des cloud tiers.
+    \item \textbf{Couche MLOps, Stockage \& Observabilité} : Ensemble de composants dédiés à la persistance des données et à la supervision (Base vectorielle Qdrant, Base SQLite \texttt{monitoring.db}, Serveur de traces distribuées Langfuse, Serveur de tracking d'expériences MLflow et gestionnaire de version DVC).
+\end{enumerate}
+
+\subsection{Justification du Style Architectural}
+Le choix architectural s'est porté sur une \textbf{architecture microservices conteneurisée sous Docker Compose}. Ce style architectural offre des avantages décisifs :
+\begin{itemize}
+    \item \textbf{Séparation stricte des responsabilités} : Chaque composant (API, base vectorielle, observabilité) est isolé dans son propre conteneur, garantissant l'indépendance des dépendances logicielles.
+    \item \textbf{Souveraineté et reproductibilité} : L'intégralité de la stack s'exécute localement dans un réseau privé virtuel Docker (\texttt{bridge}), assurant un déploiement déterministe et étanche.
+    \item \textbf{Évolutivité et scalabilité} : Possibilité de remplacer ou de mettre à jour un sous-système (ex: changer le modèle LLM d'inférence) sans impacter les autres modules.
+\end{itemize}
+
+\section{Architecture du Pipeline d'Ingestion}
+
+\subsection{Extraction du Texte}
+Le pipeline d'ingestion (\texttt{src/ingestion.py}) est responsable de la transformation de documents bruts multiformats en texte exploitable.
+\begin{itemize}
+    \item \textbf{Formats supportés} : Fichiers PDF, documents Microsoft Word (\texttt{.docx}) et fichiers texte (\texttt{.txt}).
+    \item \textbf{Moteurs d'extraction} : Utilisation de la bibliothèque \texttt{pypdf}/\texttt{pdfplumber} pour le parsing des structures PDF, de \texttt{python-docx} pour l'extraction structurée des paragraphes Word, et du décodeur natif UTF-8 pour les fichiers texte.
+    \item \textbf{Nettoyage du texte} : Élimination des caractères de contrôle parasites, normalisation des espaces multiples et suppression des en-têtes et pieds de page répétitifs.
+\end{itemize}
+
+\subsection{Découpage Sémantique (Chunking)}
+Pour respecter la fenêtre de contexte des modèles d'embeddings et préserver la cohérence sémantique, les documents extraits sont découpés en fragments de texte appelés \textbf{chunks}.
+\begin{itemize}
+    \item \textbf{Stratégie de découpage} : Découpage sémantique par fenêtre glissante basée sur les limites naturelles de paragraphes et de phrases.
+    \item \textbf{Paramètres d'ingestion} : Taille maximale fixe de $500$ caractères par chunk, associée à un chevauchement (\textit{overlap}) de $100$ caractères.
+    \item \textbf{Justification} : Le chevauchement de 100 caractères garantit que les informations situées à la frontière entre deux morceaux ne sont pas tronquées, préservant la continuité du contexte lors de la recherche.
+\end{itemize}
+
+\subsection{Génération des Embeddings}
+Chaque chunk de texte est transformé en un vecteur d'embedding numérique à haute dimension :
+\begin{itemize}
+    \item \textbf{Modèle d'embedding} : \texttt{nomic-embed-text} (exécuté en local via Ollama).
+    \item \textbf{Dimensionnalité} : Vecteurs denses de $768$ dimensions.
+    \item \textbf{Optimisation} : Traitement par lots (\textit{batching}) pour accélérer la vectorisation lors de l'ingestion de volumes documentaires importants.
+\end{itemize}
+
+\subsection{Indexation dans la Base Vectorielle Qdrant}
+Les vecteurs générés sont indexés dans la collection Qdrant \texttt{enterprise\_documents} :
+\begin{itemize}
+    \item \textbf{Structure d'un point Qdrant} : Chaque point indexé associe un identifiant unique (UUID v5 déterministe basé sur le nom du fichier et l'index du chunk), le vecteur dense de $768$ dimensions et un objet \texttt{payload} contenant les métadonnées.
+    \item \textbf{Métadonnées stockées} : \texttt{source} (nom du fichier), \texttt{file\_path}, \texttt{chunk\_id}, \texttt{chunk\_index}, \texttt{char\_count} et horodatage.
+    \item \textbf{Dédoublonnage automatique} : Avant d'insérer les nouveaux chunks d'un fichier ré-uploadé, le pipeline exécute un défilement (\textit{scroll}) des points existants portant la même métadonnée \texttt{source} et les supprime dans Qdrant afin d'éviter toute duplication de données.
+\end{itemize}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{schema_pipeline_ingestion.png}
+    \caption{Diagramme de séquence du pipeline d'ingestion et d'indexation dans Qdrant}
+    \label{fig:pipeline_ingestion}
+\end{figure}
+
+\section{Architecture du Module de Retrieval}
+
+\subsection{Implémentation de la Recherche Hybride (Vector + BM25)}
+Le module de retrieval (\texttt{src/retrieval.py}) combine deux approches de recherche complémentaires :
+\begin{enumerate}
+    \item \textbf{Recherche Vectorielle Dense} : Interroge la base Qdrant par similarité cosinus pour récupérer les $N$ candidats sémantiques les plus proches (par défaut $N=20$).
+    \item \textbf{Recherche par Mots-clés Sparse (BM25)} : Maintient un index en mémoire basé sur la bibliothèque \texttt{rank\_bm25} pour évaluer la correspondance lexicale exacte des termes de la question.
+    \item \textbf{Fusion des Scores} : Les candidats issus des deux canaux sont fusionnés selon la formule de pondération linéaire suivante :
+    \begin{equation}
+    \text{Score}_{\text{Hybride}} = 0.70 \cdot \text{Score}_{\text{Vector}} + 0.30 \cdot \text{Score}_{\text{BM25}}
+    \end{equation}
+\end{enumerate}
+
+\subsection{Réordonnancement Fin par Cross-Encoder (Reranking)}
+Afin de maximiser la précision des fragments retenus, les $N$ candidats issus de la recherche hybride sont transmis au module de réordonnancement :
+\begin{itemize}
+    \item \textbf{Modèle de Reranking} : Cross-Encoder \texttt{ms-marco-MiniLM-L-6-v2} (via la bibliothèque \texttt{sentence-transformers}).
+    \item \textbf{Processus} : Le modèle évalue simultanément chaque couple $(\text{Question}, \text{Chunk candidate})$ et réattribue un score de pertinence fine. Les candidats sont ensuite ré-ordonnés et filtrés pour ne conserver que le Top-$K$ final (par défaut $K=5$).
+\end{itemize}
+
+\subsection{Mécanisme de Contrôle de Pertinence Anti-Hallucination}
+Pour garantir l'absence totale d'hallucinations lorsque le système est interrogé sur un sujet absent de la base documentaire d'Owl Media, un mécanisme de filtrage par seuil (\textit{Short-Circuiting}) est implémenté :
+\begin{itemize}
+    \item \textbf{Seuil de pertinence} : $\text{similarity\_threshold} = 0.30$.
+    \item \textbf{Logique de décision} : Si le score du meilleur candidat retenu après reranking est strictement inférieur à $0.30$, le pipeline interrompt immédiatement le traitement, définit le statut de la requête à \texttt{NO\_CONTEXT} et retourne directement le message sécurisé : \textit{« L'information n'est pas disponible dans les documents fournis »}, sans effectuer aucun appel au LLM local.
+\end{itemize}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{schema_decision_antihallucination.png}
+    \caption{Organigramme de décision du mécanisme anti-hallucination avec seuil de pertinence}
+    \label{fig:decision_antihallucination}
+\end{figure}
+
+\section{Architecture du Module de Génération (LLM)}
+
+\subsection{Intégration du LLM Local}
+Lorsque le contexte extrait dépasse le seuil de pertinence ($ \ge 0.30 $), le module de génération est sollicité :
+\begin{itemize}
+    \item \textbf{Moteur et Modèle} : Moteur d'inférence Ollama hébergeant le modèle local \texttt{llama3.2:1b}.
+    \item \textbf{URL d'hôte Docker} : Communication via l'interface réseau interne \texttt{http://host.docker.internal:11434}.
+\end{itemize}
+
+\subsection{Structure du Prompt Système}
+Pour forcer le LLM à respecter strictly le contexte fourni et interdire tout ajout d'information externe, le prompt système suivant est injecté :
+
+\begin{quote}
+\small
+\textit{« Vous êtes un assistant IA intelligent et expert de l'entreprise. Répondez de manière claire à partir du contexte fourni ci-dessous. Si la réponse exacte n'est pas présente, mais que le contexte donne des éléments pertinents, utilisez-les. Si le sujet est totalement absent, indiquez : 'L'information n'est pas disponible dans les documents fournis'. »}
+\end{quote}
+
+\subsection{Restitution des Sources et Format de Réponse}
+La réponse renvoyée par le backend FastAPI sous forme d'objet JSON (\texttt{QueryResponse}) contient :
+\begin{itemize}
+    \item L'identifiant unique de la requête \texttt{query\_id}.
+    \item Le texte final de la réponse générée.
+    \item Le tableau structuré des sources utilisées (nom du fichier, extrait du chunk, score de pertinence et score de reranking).
+    \item Le détail des latences décomposées par étape (retrieval, hybrid, reranking, LLM, total).
+\end{itemize}
+
+\section{Architecture de la Couche MLOps et Observabilité}
+
+\subsection{Monitoring et Persistance SQLite}
+La supervision en temps réel s'appuie sur le service autonome \texttt{MonitoringService} (\texttt{src/monitoring.py}) :
+\begin{itemize}
+    \item \textbf{Base de données dédiée} : Base de données SQLite locale \texttt{data/monitoring.db}.
+    \item \textbf{Table queries} : Enregistre de manière asynchrone pour chaque requête : \texttt{query\_id}, \texttt{timestamp}, \texttt{retrieval\_mode}, \texttt{top\_k}, \texttt{reranking\_enabled}, \texttt{retrieval\_latency}, \texttt{hybrid\_latency}, \texttt{reranking\_latency}, \texttt{llm\_latency}, \texttt{total\_latency}, \texttt{candidates\_count}, \texttt{final\_sources\_count}, \texttt{status} et \texttt{error\_type}.
+    \item \textbf{Calcul des percentiles P50/P95} : Agrégation dynamique des métriques de latence sur des fenêtres glissantes (1h, 24h, 7d, 30d).
+\end{itemize}
+
+\subsection{RAG Trace et Propagation du query\_id}
+Chaque requête entrante se voit attribuer un identifiant unique universel \texttt{query\_id} (ex: \texttt{q\_a0a3d2b1}) généré dès la couche API. Cet identifiant est propagé à travers toutes les étapes du pipeline sémantique (\textit{RAG Trace}) et transmis à la plateforme \textbf{Langfuse} (port 3000) pour l'inspection visuelle détaillée de l'arbre d'exécution des prompts et des sous-agents.
+
+\subsection{Évaluation Quantitative et Tracking (MLflow \& DVC)}
+Le module d'évaluation (\texttt{src/eval.py}) permet de mesurer la qualité du système sur un jeu de données de référence :
+\begin{itemize}
+    \item \textbf{Gestion des jeux de données avec DVC} : Le jeu de données de référence \texttt{tests/eval\_dataset.json} (contenant les questions de test, les contextes et la vérité terrain \textit{Ground Truth}) est versionné avec \textbf{DVC} (\texttt{tests/eval\_dataset.json.dvc}) pour garantir la reproductibilité et la traçabilité des campagnes d'évaluation.
+    \item \textbf{Tracking d'expérimentations avec MLflow} : Chaque exécution d'évaluation se connecte au serveur MLflow (\texttt{http://mlflow:5000}) et enregistre le run dans l'expérience \texttt{RAG\_Evaluation\_Local}. MLflow conserve les hyperparamètres (modèle LLM, seuil, top-K) et les 8 métriques RAG calculées.
+\end{itemize}
+
+\clearpage
+
+\section{Modélisation UML}
+
+\subsection{Diagramme de Séquence : Traitement d'une Question}
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.75\textwidth]{schema_sequence_query.png}
+    \caption{Diagramme de séquence UML du traitement d'une question dans la plateforme RAG}
+    \label{fig:sequence_query}
+\end{figure}
+
+La figure~\ref{fig:sequence_query} détaille le diagramme de séquence UML décrivant la dynamique temporelle et le flux d'échanges lors de la résolution d'une requête utilisateur.
+
+Le scénario nominal d'exécution s'articule autour des étapes chronologiques suivantes :
+\begin{enumerate}
+    \item \textbf{Émission de la requête} : L'utilisateur soumet sa question en langage naturel depuis l'IHM Web (Frontend SPA). La requête est transmise sous forme de requête HTTP POST vers l'endpoint \texttt{/query} du backend FastAPI.
+    \item \textbf{Initialisation du Tracing MLOps} : Le serveur FastAPI attribue immédiatement un identifiant universel unique \texttt{query\_id} et commence la mesure de latence globale.
+    \item \textbf{Recherche Hybride (Retrieval)} : Le service d'orchestration déclenche la recherche hybride en interrogeant la base vectorielle Qdrant (similarité Cosine dense sur la collection \texttt{enterprise\_documents}) et l'index en mémoire BM25 (recherche sparse lexicale). Les scores candidats sont fusionnés selon la pondération $0.70 \cdot \text{Vector} + 0.30 \cdot \text{BM25}$.
+    \item \textbf{Reranking par Cross-Encoder} : Les $N=20$ premiers candidats sémantiques sont re-passés dans le modèle Cross-Encoder \texttt{ms-marco-MiniLM-L-6-v2} qui réordonne finement les passages pour isoler le Top-$K=5$ final.
+    \item \textbf{Filtrage Anti-Hallucination} : Le filtre évalue le score du meilleur candidat retenu par rapport au seuil fixé ($\text{similarity\_threshold} = 0.30$). Si le score est supérieur ou égal à $0.30$, le contexte est validé. Dans le cas contraire, le traitement s'interrompt (\textit{Short-Circuit}) et retourne immédiatement le statut \texttt{NO\_CONTEXT}.
+    \item \textbf{Génération par le LLM Local} : Si le contexte est validé, le prompt système enrichi est envoyé au moteur d'inférence Ollama hébergeant le modèle local \texttt{llama3.2:1b}. Le LLM génère la synthèse exacte basée sur le contexte.
+    \item \textbf{Logging et Restitution} : Le \texttt{MonitoringService} enregistre les métriques et latences décomposées de manière asynchrone dans la base SQLite \texttt{data/monitoring.db} et propage la trace vers Langfuse, puis renvoie l'objet \texttt{QueryResponse} final au Frontend UI.
+\end{enumerate}
+
+\clearpage
+
+\subsection{Diagramme de Classes Métier}
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.75\textwidth]{schema_diagramme_classes.png}
+    \caption{Diagramme de classes UML des entités du système RAG MLOps}
+    \label{fig:diagramme_classes}
+\end{figure}
+
+La figure~\ref{fig:diagramme_classes} présente le diagramme de classes UML structurant l'architecture logicielle orientée objet de l'application RAG MLOps.
+
+L'analyse de ce diagramme met en évidence trois grands blocs de classes interconnectés :
+\begin{itemize}
+    \item \textbf{Bloc Modèle de Données et Contrôle d'Accès} :
+    \begin{itemize}
+        \item La classe \texttt{User} (\texttt{user\_id}, \texttt{username}, \texttt{role}) représente les collaborateurs habilités. La classe \texttt{Admin} spécialise \texttt{User} via une relation d'héritage UML (généralisation \texttt{Admin --|> User}) et y ajoute les fonctions d'administration (\texttt{+manage\_documents()}, \texttt{+view\_monitoring()}).
+        \item La classe \texttt{Document} (\texttt{doc\_id}, \texttt{filename}, \texttt{filepath}, \texttt{upload\_date}) est liée à la classe \texttt{Chunk} par une relation de composition forte (\texttt{Document} $\blacklozenge\!\longrightarrow$ \texttt{Chunk} de multiplicité $1 \longleftrightarrow 1..*$). En cas de suppression d'un document, tous ses fragments textuels et leurs embeddings associés sont automatiquement purgés.
+        \item La multiplicité $1 \longleftrightarrow 1..*$ entre \texttt{User} et \texttt{QueryResponse} traduit la persistance de l'historique des conversations pour chaque collaborateur.
+    \end{itemize}
+    \item \textbf{Bloc Services du Pipeline RAG} :
+    \begin{itemize}
+        \item \texttt{IngestionService} : Assure l'extraction textuelle et la découpe sémantique des documents en chunks.
+        \item \texttt{HybridRetrievalEngine} : Gère la recherche hybride dense/sparse et pointe directement sur la classe \texttt{Chunk} qui porte le vecteur d'embedding \texttt{vector\_768d}.
+        \item \texttt{CrossEncoderReranker} et \texttt{AntiHallucinationFilter} : Chaînent respectivement le réordonnancement fin du Top-$N$ candidats et la validation du seuil de pertinence ($\ge 0.30$).
+        \item \texttt{LLMGenerationService} : Produit la synthèse contextuelle sous la forme d'un objet \texttt{QueryResponse}.
+    \end{itemize}
+    \item \textbf{Bloc Supervision et DTO} :
+    \begin{itemize}
+        \item \texttt{QueryResponse} : Classe DTO encapsulant la réponse générée, les sources associées, les latences décomposées et le statut d'exécution.
+        \item \texttt{MonitoringService} : Service autonome chargé de consigner les métriques dans SQLite.
+    \end{itemize}
+\end{itemize}
+
+\clearpage
+
+\subsection{Diagramme de Déploiement Docker Compose}
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.75\textwidth]{schema_diagramme_deploiement.png}
+    \caption{Diagramme de déploiement UML de la stack conteneurisée sous Docker Compose}
+    \label{fig:diagramme_deploiement}
+\end{figure}
+
+La figure~\ref{fig:diagramme_deploiement} illustre le diagramme de déploiement UML décrivant la topologie d'infrastructure logicielle et matérielle conteneurisée.
+
+L'analyse de l'architecture de déploiement s'articule autour des éléments suivants :
+\begin{itemize}
+    \item \textbf{Nœud d'Exécution Hôte (\textit{Host Node})} : Représente la station de travail locale Mac M1 (8 Go RAM unifiée). La plateforme fonctionne en autonomie complète à $100\%$ sans aucun appel API cloud distant.
+    \item \textbf{Réseau Virtuel Privé (\texttt{rag\_network})} : Subnet privé Docker Compose garantissant l'isolation réseau et la communication sécurisée inter-conteneurs via DNS interne.
+    \item \textbf{Les 5 Microservices Conteneurisés} :
+    \begin{enumerate}
+        \item \texttt{chatbot\_api} (Port 8000) : Conteneur Backend REST Uvicorn/FastAPI assurant l'orchestration du pipeline RAG et l'IHM Web.
+        \item \texttt{qdrant\_db} (Ports 6333 / 6334) : Conteneur de base vectorielle écrit en Rust pour la recherche Cosine rapide sur la collection \texttt{enterprise\_documents}.
+        \item \texttt{ollama-llm} (Port 11434) : Conteneur du moteur d'inférence local exécutant le LLM \texttt{llama3.2:1b} et le modèle d'embedding \texttt{nomic-embed-text}.
+        \item \texttt{langfuse\_server} (Port 3000) : Conteneur d'observabilité LLM couplé à une base PostgreSQL (\texttt{langfuse\_postgres:5432}) pour le tracing distribué des prompts et sous-agents.
+        \item \texttt{mlflow\_server} (Port 5001) : Conteneur MLOps d'enregistrement des campagnes d'évaluation et de benchmark.
+    \end{enumerate}
+    \item \textbf{Volumes de Persistance Disque} :
+    \begin{itemize}
+        \item \texttt{./data/raw} : Volume monté pour les fichiers documents d'entreprise importés.
+        \item \texttt{./data/monitoring.db} : Base de données SQLite locale pour les latences et les logs de supervision.
+        \item \texttt{qdrant\_data} : Volume persistant Docker pour les index vectoriels de Qdrant.
+    \end{itemize}
+\end{itemize}
+
+\clearpage
+
+\section{Choix Technologiques Justifiés}
+Le tableau~\ref{tab:choix_technologiques} récapitule la stack technique complète de la plateforme Owl Media RAG MLOps et réitère les justifications de chaque choix d'ingénierie par rapport aux alternatives de l'état de l'art.
+
+\begin{table}[htbp]
+\centering
+\caption{Synthèse et justification des choix technologiques du projet}
+\label{tab:choix_technologiques}
+\resizebox{\textwidth}{!}{%
+\small
+\begin{tabular}{|l|l|p{8.5cm}|}
+\hline
+\textbf{Composant / Volet} & \textbf{Technologie} & \textbf{Justification du Choix Technique} \\ \hline
+\textbf{Backend Framework} & FastAPI & Traitement asynchrone haute performance, typage Python strict et documentation OpenAPI automatique. \\ \hline
+\textbf{Base Vectorielle} & Qdrant & Traitement local sous Docker Compose, moteur Rust haute vitesse et filtrage des métadonnées. \\ \hline
+\textbf{Embeddings} & \texttt{nomic-embed-text} & Vecteurs denses à $768$ dimensions, modèle léger exécuté localement via Ollama. \\ \hline
+\textbf{LLM Local} & Ollama / Llama 3.2 1B & Modèle compact à $1.2$ milliard de paramètres, inférence locale rapide et confidentialité totale. \\ \hline
+\textbf{Recherche Hybride} & Vector + BM25 & Association de la recherche sémantique Qdrant et de la recherche lexicale BM25 par mots-clés. \\ \hline
+\textbf{Reranking} & Cross-Encoder (\texttt{ms-marco}) & Réordonnancement fin du couple (Question, Passage) sur le Top-$20$ pour filtrer le Top-$K=5$ final. \\ \hline
+\textbf{Monitoring Local} & SQLite (\texttt{monitoring.db}) & Persistance locale et légère des métriques de latences P50/P95 et du statut des requêtes. \\ \hline
+\textbf{Observabilité LLM} & Langfuse & Visualisation distribuée des arbres de traces d'exécution, des prompts et des sous-agents. \\ \hline
+\textbf{Tracking \& Versioning} & MLflow \& DVC & Traçabilité des campagnes d'expérimentation RAG et versionnement déterministe des jeux de test. \\ \hline
+\textbf{Frontend Dashboard} & HTML5 / CSS3 / Vanilla JS & Interface web moderne, sobre, réactive et autonome sans dépendance vers un framework tiers. \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+\section{Conclusion}
+Ce quatrième chapitre a présenté la conception détaillée de la plateforme souveraine Owl Media RAG MLOps. Nous avons formalisé l'architecture globale conteneurisée, la conception modulaire des pipelines d'ingestion, de recherche hybride avec Reranking, de filtrage anti-hallucination et de supervision MLOps, ainsi que les diagrammes UML de séquence, de classes et de déploiement. 
+
+Le chapitre suivant sera consacré à la \textbf{Réalisation et implémentation}, où nous présenterons concrètement l'environnement de travail et le développement du code source de l'application.

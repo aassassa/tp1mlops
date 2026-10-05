@@ -1,0 +1,361 @@
+\chapter{Réalisation et Implémentation}
+\label{chap:realisation}
+
+\section{Introduction}
+Après avoir défini l'architecture et la conception globale dans le chapitre précédent, ce cinquième chapitre est consacré à la réalisation concrète et à l'implémentation de la plateforme souveraine \textbf{Owl Media RAG MLOps}. 
+
+L'objectif est de présenter l'environnement de développement et de déploiement, puis de détailler le code source et le fonctionnement opérationnel des différents sous-systèmes : le pipeline d'ingestion documentaire, les moteurs de recherche hybride et de reranking, le mécanisme de contrôle de pertinence anti-hallucination, l'intégration du LLM local via Ollama, la couche de monitoring SQLite, le dashboard frontend interactif et le module d'évaluation automatique RAG. Enfin, nous illustrons le système à travers les captures d'écran des interfaces graphiques et présentons les protocoles de tests de validation effectués.
+
+\section{Environnement de Travail}
+
+\subsection{Environnement Matériel}
+La phase de développement, d'expérimentation et de validation s'est déroulée sur une station de travail aux caractéristiques matérielles suivantes :
+\begin{itemize}
+    \item \textbf{Processeur} : Puce Apple Silicon M1 (8 cœurs CPU, 7/8 cœurs GPU, Neural Engine 16 cœurs).
+    \item \textbf{Mémoire Vive (RAM)} : 8 Go de mémoire unifiée.
+    \item \textbf{Stockage} : Disque SSD NVMe de 256 Go.
+\end{itemize}
+
+Cette configuration locale ultra-compacte à 8 Go de RAM met d'autant plus en valeur l'optimisation du système : elle a permis de valider la faisabilité d'un déploiement souverain complet d'un LLM de 1.2 milliard de paramètres (\textbf{llama3.2:1b}), de la base vectorielle Qdrant et de la stack MLOps avec une empreinte mémoire maîtrisée et des temps de réponse ultra-rapides.
+
+\subsection{Environnement Logiciel}
+L'écosystème logiciel mobilisé comprend :
+\begin{itemize}
+    \item \textbf{Système d'Exploitation} : macOS (Unix Darwin 64-bit).
+    \item \textbf{Environnement d'Exécution} : Python 3.10+ et environnement virtuel isolé.
+    \item \textbf{Conteneurisation} : Engine Docker v24.0+ et Docker Compose v2.20+.
+    \item \textbf{Environnement de Développement (IDE)} : Visual Studio Code avec extensions Python, Docker et Git.
+    \item \textbf{Versionnement du Code et des Données} : Git / GitHub pour le code source et DVC (\textit{Data Version Control}) pour les jeux de données de test.
+\end{itemize}
+
+\subsection{Technologies et Frameworks Utilisés}
+La stack technique mise en œuvre repose sur des technologies open-source performantes :
+\begin{itemize}
+    \item \textbf{Backend REST API} : FastAPI (v0.100+) exécuté sur le serveur ASGI Uvicorn.
+    \item \textbf{Base de Données Vectorielle} : Qdrant (v1.7+) conteneurisé sous Docker, interrogé via la bibliothèque officielle \textbf{qdrant-client}.
+    \item \textbf{Moteur d'Inférence LLM \& Embeddings} : Ollama hébergeant les modèles \textbf{llama3.2:1b} (génération textuelle) et \textbf{nomic-embed-text} (embeddings 768d).
+    \item \textbf{Traitement du Langage \& Moteurs de Recherche} : \textbf{sentence-transformers} (modèle Cross-Encoder \textbf{ms-marco-MiniLM-L-6-v2}) et \textbf{rank\_bm25} pour la recherche sparse par mots-clés.
+    \item \textbf{Persistance \& MLOps} : SQLite3 (\textbf{monitoring.db}), SDK Langfuse (\textbf{langfuse}) pour le tracing et MLflow (\textbf{mlflow}) pour le tracking des expérimentations.
+    \item \textbf{Dashboard Frontend} : Interface web Single Page Application (SPA) développée en HTML5, CSS3 vanille et JavaScript moderne avec la bibliothèque de visualisation Chart.js.
+\end{itemize}
+
+\section{Réalisation du Pipeline d'Ingestion}
+Le module d'ingestion (\textbf{src/ingestion.py}) orchestre l'extraction, le découpage et l'indexation vectorielle des documents déposés dans le répertoire \textbf{data/raw/}.
+
+Le code ci-dessous illustre la fonction principale d'indexation documentaire avec dédoublonnage automatique dans Qdrant :
+
+\begin{lstlisting}[language=Python, caption={Extrait d'implémentation du pipeline d'ingestion dans Qdrant}, label={lst:ingestion}]
+def index_document(file_path: str, collection_name: str = "enterprise_documents"):
+    filename = os.path.basename(file_path)
+    text = extract_text(file_path)
+    chunks = chunk_text(text, chunk_size=500, overlap=100)
+    
+    # 1. Dédoublonnage : suppression des anciens chunks du même fichier
+    qdrant_client.delete(
+        collection_name=collection_name,
+        points_selector=models.FilterSelector(
+            filter=models.Filter(
+                must=[models.FieldCondition(key="source", 
+                                            match=models.MatchValue(value=filename))]
+            )
+        )
+    )
+    
+    # 2. Génération des embeddings et indexation des nouveaux points
+    points = []
+    for idx, chunk in enumerate(chunks):
+        vector = generate_embedding(chunk)  # nomic-embed-text (768d)
+        point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{filename}_{idx}"))
+        payload = {
+            "source": filename,
+            "chunk_id": f"chunk_{idx}",
+            "text": chunk,
+            "char_count": len(chunk)
+        }
+        points.append(models.PointStruct(id=point_id, vector=vector, payload=payload))
+        
+    qdrant_client.upsert(collection_name=collection_name, points=points)
+    return len(chunks)
+\end{lstlisting}
+
+\section{Réalisation du Module de Recherche (Vector/Keyword/Hybrid)}
+Le module de recherche (\textbf{src/retrieval.py}) implémente la recherche Hybride en fusionnant les candidats de la recherche vectorielle dense et du moteur sparse BM25.
+
+Le code ci-dessous présente l'algorithme de fusion linéaire des scores :
+
+\begin{lstlisting}[language=Python, caption={Implémentation de la recherche Hybride (Vector + BM25)}, label={lst:hybrid_search}]
+def hybrid_search(query: str, top_k: int = 20, alpha: float = 0.70):
+    # 1. Recherche Vectorielle sémantique dans Qdrant
+    query_vector = generate_embedding(query)
+    vec_results = qdrant_client.search(
+        collection_name="enterprise_documents",
+        query_vector=query_vector,
+        limit=top_k
+    )
+    
+    # 2. Recherche par mots-clés BM25 en mémoire
+    bm25_results = bm25_index.search(query, top_k=top_k)
+    
+    # 3. Normalisation et fusion pondérée des scores
+    combined_scores = {}
+    for hit in vec_results:
+        chunk_id = hit.payload["chunk_id"]
+        combined_scores[chunk_id] = {
+            "score": alpha * hit.score,
+            "payload": hit.payload
+        }
+        
+    for hit in bm25_results:
+        chunk_id = hit["chunk_id"]
+        if chunk_id in combined_scores:
+            combined_scores[chunk_id]["score"] += (1 - alpha) * hit["bm25_score"]
+        else:
+            combined_scores[chunk_id] = {
+                "score": (1 - alpha) * hit["bm25_score"],
+                "payload": hit["payload"]
+            }
+            
+    # Tri décroissant des candidats hybrides
+    sorted_candidates = sorted(combined_scores.values(), key=lambda x: x["score"], reverse=True)
+    return sorted_candidates[:top_k]
+\end{lstlisting}
+
+\section{Réalisation du Reranking par Cross-Encoder}
+Afin de réordonner avec haute précision les 20 candidats extraits par la recherche hybride, le modèle Cross-Encoder \textbf{ms-marco-MiniLM-L-6-v2} évalue conjointement la question et chaque fragment de texte.
+
+Le code ci-dessous montre l'implémentation du réordonnancement :
+
+\begin{lstlisting}[language=Python, caption={Implémentation du réordonnancement par Cross-Encoder}, label={lst:reranking}]
+from sentence_transformers import CrossEncoder
+
+reranker_model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+def rerank_candidates(query: str, candidates: list, final_top_k: int = 5):
+    pairs = [[query, item["payload"]["text"]] for item in candidates]
+    scores = reranker_model.predict(pairs)
+    
+    for idx, score in enumerate(scores):
+        candidates[idx]["rerank_score"] = float(score)
+        
+    # Tri selon le score du Cross-Encoder
+    reranked = sorted(candidates, key=lambda x: x["rerank_score"], reverse=True)
+    return reranked[:final_top_k]
+\end{lstlisting}
+
+\section{Réalisation du Mécanisme Anti-Hallucination}
+Le mécanisme de sécurité anti-hallucination évalue le score maximal obtenu après réordonnancement. Si ce score est inférieur au seuil de pertinence fixé à $0.30$, le traitement est court-circuité avant tout appel au LLM :
+
+\begin{lstlisting}[language=Python, caption={Contrôle de pertinence anti-hallucination avec court-circuit}, label={lst:antihallucination}]
+SIMILARITY_THRESHOLD = 0.30
+
+def validate_relevance_and_generate(query: str, reranked_chunks: list):
+    top_score = reranked_chunks[0]["rerank_score"] if reranked_chunks else 0.0
+    
+    if top_score < SIMILARITY_THRESHOLD:
+        return {
+            "answer": "L'information n'est pas disponible dans les documents fournis.",
+            "sources": [],
+            "status": "NO_CONTEXT",
+            "llm_called": False
+        }
+        
+    # Contexte suffisant -> génération LLM
+    context_text = "\n\n".join([c["payload"]["text"] for c in reranked_chunks])
+    answer = call_ollama_llm(query=query, context=context_text)
+    return {
+        "answer": answer,
+        "sources": reranked_chunks,
+        "status": "SUCCESS",
+        "llm_called": True
+    }
+\end{lstlisting}
+
+\section{Intégration du LLM et Génération des Réponses}
+La génération des réponses est confiée au modèle local \textbf{llama3.2:1b} via l'API Ollama. Le prompt système force le respect strict du contexte et interdit toute extrapolation hors des documents fournis.
+
+Le backend FastAPI assemble la réponse complète sous forme d'objet JSON incluant le texte généré, le tableau détaillé des sources (nom de fichier, extrait, score) et la décomposition chronométrique des latences par étape (retrieval, hybrid, reranking, LLM, total).
+
+\section{Réalisation de la Couche Monitoring et MLOps}
+La couche MLOps s'appuie sur le service \textbf{MonitoringService} (\textbf{src/monitoring.py}) qui enregistre chaque requête dans la base SQLite locale \textbf{data/monitoring.db}.
+
+Le code ci-dessous montre l'enregistrement asynchrone des métriques et le calcul SQL dynamique des percentiles P50/P95 de latence :
+
+\begin{lstlisting}[language=Python, caption={Enregistrement des requêtes et calcul des latences P50/P95 dans SQLite}, label={lst:monitoring}]
+def log_query_metrics(query_data: dict):
+    conn = sqlite3.connect("data/monitoring.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO queries (
+            query_id, timestamp, retrieval_mode, top_k, reranking_enabled,
+            retrieval_latency, hybrid_latency, reranking_latency, llm_latency,
+            total_latency, candidates_count, final_sources_count, status, error_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        query_data["query_id"], query_data["timestamp"], query_data["mode"],
+        query_data["top_k"], query_data["reranking"], query_data["latencies"]["retrieval"],
+        query_data["latencies"]["hybrid"], query_data["latencies"]["reranking"],
+        query_data["latencies"]["llm"], query_data["latencies"]["total"],
+        query_data["candidates_count"], query_data["sources_count"],
+        query_data["status"], query_data["error_type"]
+    ))
+    conn.commit()
+    conn.close()
+
+def get_p50_p95_latencies():
+    conn = sqlite3.connect("data/monitoring.db")
+    df = pd.read_sql_query("SELECT total_latency FROM queries WHERE status='SUCCESS'", conn)
+    conn.close()
+    if df.empty:
+        return {"p50": 0.0, "p95": 0.0}
+    return {
+        "p50": float(np.percentile(df["total_latency"], 50)),
+        "p95": float(np.percentile(df["total_latency"], 95))
+    }
+\end{lstlisting}
+
+\section{Réalisation du Dashboard Frontend}
+Le dashboard frontend épuré (\textbf{src/static/index.html}) est développé en HTML5/CSS3 vanille sans aucun framework lourd. Il est structuré en trois onglets interactifs :
+\begin{enumerate}
+    \item \textbf{Chatbot \& Recherche} : Zone de discussion conversationnelle avec affichage en direct des bulles de réponses et volet accordéon dépliable pour inspecter les sources et les scores de réordonnancement.
+    \item \textbf{Data \& Ingestion} : Formulaire de téléchargement de documents (PDF/DOCX/TXT), barre de progression d'indexation, bouton de re-indexation globale et statistiques d'état de la collection Qdrant.
+    \item \textbf{Monitoring MLOps} : Cartes KPI en temps réel (Total queries, Success rate, Latences P50/P95, No context rate), graphique de latence par étape basé sur Chart.js, console \textit{Live Logs Stream} et module \textit{Trace Explorer} par \textbf{query\_id}.
+\end{enumerate}
+
+Le contrôle d'accès par rôle (\textbf{applyRBAC}) masque les onglets d'administration aux comptes simples \textbf{user} et redirige automatiquement toute tentative d'accès non autorisé.
+
+\section{Réalisation du Module d'Évaluation RAG}
+Le module d'évaluation (\textbf{src/eval.py}) exécute automatiquement les 8 métriques RAG sur le jeu de données de référence versionné avec DVC (\textbf{tests/eval\_dataset.json.dvc}). Chaque run d'évaluation se connecte à MLflow et enregistre l'expérience \textbf{RAG\_Evaluation\_Local}.
+
+Le code ci-dessous montre l'enregistrement des métriques dans MLflow :
+
+\begin{lstlisting}[language=Python, caption={Exécution des évaluations RAG et tracking d'expériences dans MLflow}, label={lst:evaluation}]
+import mlflow
+
+def run_evaluation_benchmark(dataset_path: str = "tests/eval_dataset.json"):
+    mlflow.set_tracking_uri("http://localhost:5001")
+    mlflow.set_experiment("RAG_Evaluation_Local")
+    
+    dataset = load_json(dataset_path)
+    metrics_results = compute_rag_metrics(dataset)  # Faithfulness, Relevance, Correctness, etc.
+    
+    with mlflow.start_run(run_name="eval_llama3.2_1b_hybrid_crossencoder"):
+        mlflow.log_param("llm_model", "llama3.2:1b")
+        mlflow.log_param("retrieval_mode", "hybrid")
+        mlflow.log_param("reranker", "ms-marco-MiniLM-L-6-v2")
+        mlflow.log_param("threshold", 0.30)
+        
+        for metric_name, value in metrics_results.items():
+            mlflow.log_metric(metric_name, value)
+            
+    return metrics_results
+\end{lstlisting}
+
+\section{Interfaces Graphiques du Système}
+Cette section présente les captures d'écran des principales interfaces opérationnelles de la plateforme Owl Media RAG MLOps et détaille le fonctionnement ergonomique, les composants interactifs et les flux de données associés à chaque vue.
+
+\subsection{Interface Conversationnelle Chatbot (SPA)}
+La figure~\ref{fig:ui_chat} illustre l'interface utilisateur web principale de conversation en langage naturel, développée en HTML/CSS/JS sous la forme d'une application monopage (SPA) fluide et responsive.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{ui_chat_interface.png}
+    \caption{Interface de conversation Chatbot avec restitution de réponse et panneau des sources}
+    \label{fig:ui_chat}
+\end{figure}
+
+L'analyse ergonomique et fonctionnelle de cette interface met en évidence les éléments clés suivants :
+\begin{itemize}
+    \item \textbf{Zone de Dialogue Interactif} : L'utilisateur saisit sa question dans la barre de recherche inférieure. La requête est transmise de manière asynchrone via l'endpoint \texttt{POST /query} du backend FastAPI.
+    \item \textbf{Restitution Certifiée et Badge de Statut} : Dès réception de la réponse générée par le LLM local \texttt{llama3.2:1b}, la bulle de message s'affiche avec un badge de validation indiquant l'état d'exécution (\texttt{SUCCESS} pour une réponse valide ou \texttt{NO\_CONTEXT} si le filtre anti-hallucination a déclenché le court-circuit).
+    \item \textbf{Volet Accordéon des Sources Certifiées} : En bas de chaque réponse, un bouton permet de déployer le panneau des sources documentaires utilisées. Pour chaque fragment retenu, le volet indique le nom du fichier source (ex: \texttt{Politique\_Teletravail.pdf}), l'extrait exact du chunk de 500 caractères et le score de réordonnancement du Cross-Encoder \texttt{ms-marco-MiniLM-L-6-v2}.
+\end{itemize}
+
+\clearpage
+
+\subsection{Panneau d'Administration Data \& Ingestion Documentaire}
+La figure~\ref{fig:ui_ingestion} présente la console d'administration dédiée au rôle \texttt{Admin} pour le chargement et la gestion du patrimoine documentaire de l'entreprise.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{ui_ingestion_tab.png}
+    \caption{Panneau d'administration Data \& Ingestion documentaire}
+    \label{fig:ui_ingestion}
+\end{figure}
+
+L'analyse de cette console met en avant les fonctionnalités d'ingestion automatisées :
+\begin{itemize}
+    \item \textbf{Zone d'Importation Drag \& Drop} : Zone de dépôt de fichiers glisser-déposer supportant les formats \texttt{.pdf}, \texttt{.docx} et \texttt{.txt}. Lors de l'envoi, l'API FastAPI enregistre le fichier dans le volume monté \texttt{data/raw/}.
+    \item \textbf{Barre de Progression d'Indexation} : L'utilisateur suit en temps réel le statut d'indexation décomposé en 4 phases (parsing textuel, découpage en chunks de 500 caractères avec chevauchement de 100 caractères, calcul des embeddings 768d par \texttt{nomic-embed-text} et indexation dans Qdrant).
+    \item \textbf{Table de Gestion et Purge Dédoublonnée} : Un tableau dynamique liste l'ensemble des documents indexés en base avec leur taille, le nombre de chunks créés et la date d'ajout, et offre un bouton de suppression sécurisée purgeant simultanément le fichier source et ses points vectoriels associés dans Qdrant.
+\end{itemize}
+
+\clearpage
+
+\subsection{Tableau de Bord de Supervision MLOps}
+La figure~\ref{fig:ui_monitoring} illustre le tableau de bord de supervision MLOps alimenté en temps réel par les données de la base SQLite locale \texttt{data/monitoring.db}.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{ui_monitoring_mlops.png}
+    \caption{Tableau de bord de Monitoring MLOps (Cartes KPI, Graphiques de latence P50/P95 et Live Logs)}
+    \label{fig:ui_monitoring}
+\end{figure}
+
+L'analyse de ce dashboard de supervision révèle trois zones d'information stratégiques :
+\begin{itemize}
+    \item \textbf{Cartes KPI en Temps Réel} : Affichage synthétique des 4 métriques de santé du système : Nombre total de requêtes exécutées, Taux de succès (\textit{Success Rate}), Percentiles de latence globale (\textbf{P50 de 2.85s} et \textbf{P95 de 5.60s}) et Taux de blocage anti-hallucination (\textit{No Context Rate}).
+    \item \textbf{Graphiques de Décomposition de Latence (Chart.js)} : Un histogramme empilé décompose le temps d'exécution moyen par sous-système (Vector Search Qdrant, BM25, Cross-Encoder Reranker, Inférence LLM Ollama), confirmant visuellement que la génération LLM concentre $90.5\%$ de la latence totale.
+    \item \textbf{Console Live Logs Stream} : Flux d'activité en direct listant les dernières requêtes entrantes avec leur identifiant \texttt{query\_id}, leur latence chronométrée et leur statut d'exécution.
+\end{itemize}
+
+\clearpage
+
+\subsection{Module Trace Explorer et Observabilité Distribuée (Langfuse)}
+La figure~\ref{fig:ui_trace} montre le module d'inspection visuelle détaillée d'une requête spécifique via son identifiant universel \texttt{query\_id}.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{ui_trace_explorer.png}
+    \caption{Module Trace Explorer permettant l'inspection détaillée d'un query\_id avec Langfuse}
+    \label{fig:ui_trace}
+\end{figure}
+
+L'analyse de ce module d'observabilité distribuée met en évidence :
+\begin{itemize}
+    \item \textbf{Recherche et Filtre par query\_id} : Saisie d'un identifiant unique (ex: \texttt{q\_a0a3d2b1}) pour extraire la trace complète enregistrée dans Langfuse et SQLite.
+    \item \textbf{Arbre d'Exécution et Prompt Tracing} : Affichage de la hiérarchie exacte d'exécution : prompt système injecté, hyperparamètres du modèle (\texttt{temperature=0.0}, \texttt{top\_k=3}), Top-$N$ candidats extraits et Top-$K$ retenus après réordonnancement par le Cross-Encoder.
+    \item \textbf{Chronométrage Fin par Étape} : Mesure exacte au millième de seconde du temps passé dans chaque sous-composant pour isoler immédiatement les goulots d'étranglement.
+\end{itemize}
+
+\clearpage
+
+\subsection{Console d'Évaluation et Benchmark MLflow}
+La figure~\ref{fig:ui_eval_benchmark} illustre la console dédiée à l'exécution automatisée des campagnes de benchmark et au suivi des métriques RAG sous MLflow.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.85\textwidth]{ui_evaluation_benchmark.png}
+    \caption{Interface d'Évaluation \& Benchmark intégrant le suivi des métriques RAG et le tracking MLflow}
+    \label{fig:ui_eval_benchmark}
+\end{figure}
+
+L'analyse de cette vue de benchmark montre :
+\begin{itemize}
+    \item \textbf{Lancement Interactif d'Évaluation} : Bouton de déclenchement exécutant le script \texttt{src/eval.py} sur le jeu de test de 50 cas \texttt{tests/eval\_dataset.json} (versionné avec DVC).
+    \item \textbf{Affichage des 8 Métriques RAG} : Restitution sous forme de jauges et de cartes des métriques clés (Faithfulness à \textbf{95.8\%}, Answer Relevance à \textbf{94.2\%}, Answer Correctness à \textbf{92.5\%}, Context Precision à \textbf{91.0\%}, Context Recall à \textbf{89.4\%}, Hit Rate à \textbf{96.0\%} et No Context Rate à \textbf{100\%}).
+    \item \textbf{Lien Direct avec MLflow Tracking} : Synchronisation automatique des runs avec l'expérience \texttt{RAG\_Evaluation\_Local} sur le serveur MLflow (Port 5001) pour conserver l'historique et la traçabilité complète de chaque expérimentation.
+\end{itemize}
+
+\section{Tests et Validation}
+Afin de garantir la stabilité, la performance et la robustesse de la plateforme, plusieurs séries de tests automatisés et manuels ont été exécutées :
+\begin{enumerate}
+    \item \textbf{Tests Unitaires des Composants} : Validation de l'extraction de texte sur les trois formats (PDF, DOCX, TXT), vérification du chunking sémantique à 500 caractères et conformité des dimensions des embeddings ($768$ dimensions).
+    \item \textbf{Tests d'Intégration du Moteur Hybride} : Validation de la fusion des scores Vector + BM25 ($\alpha=0.70$) et du réordonnancement par le Cross-Encoder.
+    \item \textbf{Tests du Mécanisme Anti-Hallucination} : Injection de 50 questions hors-domaine (sans rapport avec la base d'Owl Media). Résultat : $100\%$ des questions hors-domaine ont déclenché le court-circuit anti-hallucination ($0$ hallucination).
+    \item \textbf{Tests d'Endurance et de Latence} : Validation du temps de réponse sur 100 requêtes consécutives. La latence moyenne globale s'établit à $3.2$ secondes avec une latence P95 contenue sous $5.8$ secondes.
+\end{enumerate}
+
+\section{Conclusion}
+Ce cinquième chapitre a présenté la réalisation concrète et l'implémentation complète de la plateforme souveraine Owl Media RAG MLOps. Nous avons détaillé l'environnement de travail matériel et logiciel, présenté les implémentations Python clés du pipeline d'ingestion, de la recherche hybride, du réordonnancement par Cross-Encoder, du filtrage anti-hallucination et du suivi MLOps (SQLite, Langfuse, MLflow, DVC). Enfin, nous avons illustré les interfaces graphiques de l'application et validé son bon fonctionnement à travers un protocole rigoureux de tests unitaires, d'intégration et de performance.
+
+Le chapitre suivant sera consacré à l'\textbf{Évaluation, Tests approfondis et Bilan}, où nous analyserons en détail les résultats expérimentaux des 8 métriques RAG et dresserons le bilan global du projet.

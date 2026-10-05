@@ -118,7 +118,82 @@ class DocumentIngestionPipeline:
                 })
         return chunks
 
-    def index_chunks(self, chunks: List[Dict[str, Any]]) -> bool:
+    def semantic_chunk_documents(self, documents: List[Dict[str, Any]], percentile_threshold: float = 90.0) -> List[Dict[str, Any]]:
+        """
+        Découpe les documents de manière sémantique en regroupant les phrases ayant un sens proche.
+        """
+        import re
+        import numpy as np
+
+        chunks = []
+        for doc in documents:
+            # 1. Découpage en phrases simples
+            sentences = re.split(r'(?<=[.!?])\s+', doc["text"].strip())
+            sentences = [s for s in sentences if len(s.strip()) > 10]
+            
+            if len(sentences) < 2:
+                chunks.append({
+                    "text": doc["text"],
+                    "metadata": doc["metadata"]
+                })
+                continue
+                
+            # 2. Vectorisation de chaque phrase
+            sentence_embeddings = self.embeddings.embed_documents(sentences)
+            
+            # 3. Calcul des distances de similarité cosinus
+            similarities = []
+            for i in range(len(sentence_embeddings) - 1):
+                v1 = np.array(sentence_embeddings[i])
+                v2 = np.array(sentence_embeddings[i+1])
+                similarity = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+                similarities.append(similarity)
+                
+            distances = [1 - sim for sim in similarities]
+            
+            # 4. Calcul du seuil de coupure (percentile)
+            threshold = np.percentile(distances, percentile_threshold)
+            
+            # 5. Regroupement des phrases en chunks
+            current_chunk = [sentences[0]]
+            chunk_idx = 0
+            
+            for i in range(len(sentences) - 1):
+                if distances[i] > threshold:
+                    chunk_text = " ".join(current_chunk)
+                    chunk_metadata = doc["metadata"].copy()
+                    chunk_metadata.update({
+                        "chunk_id": f"{chunk_metadata['source']}_semantic_{chunk_idx}",
+                        "chunk_index": chunk_idx,
+                        "char_count": len(chunk_text),
+                        "chunk_type": "semantic"
+                    })
+                    chunks.append({
+                        "text": chunk_text,
+                        "metadata": chunk_metadata
+                    })
+                    current_chunk = [sentences[i+1]]
+                    chunk_idx += 1
+                else:
+                    current_chunk.append(sentences[i+1])
+                    
+            if current_chunk:
+                chunk_text = " ".join(current_chunk)
+                chunk_metadata = doc["metadata"].copy()
+                chunk_metadata.update({
+                    "chunk_id": f"{chunk_metadata['source']}_semantic_{chunk_idx}",
+                    "chunk_index": chunk_idx,
+                    "char_count": len(chunk_text),
+                    "chunk_type": "semantic"
+                })
+                chunks.append({
+                    "text": chunk_text,
+                    "metadata": chunk_metadata
+                })
+                
+        return chunks
+
+    def index_chunks(self, chunks: List[Dict[str, Any]], progress_callback=None) -> bool:
         """
         Génère les embeddings pour chaque chunk et les insère dans Qdrant.
         """
@@ -131,13 +206,21 @@ class DocumentIngestionPipeline:
         texts = [chunk["text"] for chunk in chunks]
         
         try:
+            if progress_callback:
+                progress_callback("embedding", 20, "Génération des embeddings...", len(chunks), 0)
+                
             # Génération des embeddings via Ollama
             embeddings_list = self.embeddings.embed_documents(texts)
             
+            if progress_callback:
+                progress_callback("embedding", 100, "Embeddings générés.")
+                progress_callback("qdrant", 20, "Insertion dans Qdrant...")
+                
             # Préparation des points pour Qdrant
+            import uuid
             points = []
             for idx, (chunk, vector) in enumerate(zip(chunks, embeddings_list)):
-                point_id = int(hash(chunk["metadata"]["chunk_id"]) % 1e15) # ID numérique unique
+                point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, chunk["metadata"]["chunk_id"]))
                 points.append(
                     models.PointStruct(
                         id=point_id,
@@ -156,27 +239,51 @@ class DocumentIngestionPipeline:
                 points=points
             )
             print(f"Indexation réussie de {len(chunks)} points.")
+            
+            if progress_callback:
+                progress_callback("completed", 100, "Indexation terminée avec succès.")
             return True
         except Exception as e:
             print(f"Erreur d'indexation dans Qdrant : {e}")
+            if progress_callback:
+                progress_callback("error", 0, f"Erreur Qdrant: {str(e)}")
             return False
 
-    def run_pipeline(self, file_path: str, chunk_size: int = 500, chunk_overlap: int = 50) -> bool:
+    def run_pipeline(self, file_path: str, chunk_size: int = 500, chunk_overlap: int = 50, use_semantic: bool = False, progress_callback=None) -> bool:
         """
         Exécute le pipeline complet pour un fichier donné.
         """
-        print(f"Début du pipeline d'ingestion pour : {file_path}")
+        print(f"Début du pipeline d'ingestion pour : {file_path} (Sémantique : {use_semantic})")
+        
+        if progress_callback:
+            progress_callback("extraction", 10, "Extraction du texte en cours...")
+            
         raw_docs = self.extract_text(file_path)
         if not raw_docs:
             print("Extraction de texte vide ou échouée.")
+            if progress_callback:
+                progress_callback("error", 0, "Échec de l'extraction de texte.")
             return False
             
-        chunks = self.chunk_documents(raw_docs, chunk_size, chunk_overlap)
-        success = self.index_chunks(chunks)
+        if progress_callback:
+            progress_callback("extraction", 100, "Texte extrait.", 0, len(raw_docs))
+            progress_callback("chunking", 20, "Découpage du document...")
+            
+        if use_semantic:
+            chunks = self.semantic_chunk_documents(raw_docs, percentile_threshold=90.0)
+        else:
+            chunks = self.chunk_documents(raw_docs, chunk_size, chunk_overlap)
+            
+        if progress_callback:
+            progress_callback("chunking", 100, "Découpage terminé.", len(chunks), len(raw_docs))
+            
+        success = self.index_chunks(chunks, progress_callback=progress_callback)
         return success
 
 if __name__ == "__main__":
-    # Test local rapide
-    # pipeline = DocumentIngestionPipeline()
-    # pipeline.run_pipeline("chemin/vers/un/doc.pdf")
-    pass
+    pipeline = DocumentIngestionPipeline()
+    print("--- Ingestion TXT (Sémantique) ---")
+    pipeline.run_pipeline("data/raw/politique_teletravail.txt", use_semantic=True)
+    
+    print("\n--- Ingestion DOCX (Sémantique) ---")
+    pipeline.run_pipeline("data/raw/guide_securite.docx", use_semantic=True)

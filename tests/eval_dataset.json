@@ -1,0 +1,26 @@
+[
+  {
+    "question": "Quels salariés sont éligibles au télétravail chez Owl Media ?",
+    "ground_truth": "Tout salarié ayant au moins 3 mois d'ancienneté au sein de l'entreprise Owl Media est éligible au mode de travail hybride/télétravail."
+  },
+  {
+    "question": "Quel est le rythme standard de télétravail par semaine ?",
+    "ground_truth": "Le rythme standard est fixé à deux (2) jours de télétravail par semaine. Le télétravail à 100% n'est pas autorisé."
+  },
+  {
+    "question": "Quels sont les équipements et compensations fournis pour le télétravail ?",
+    "ground_truth": "Owl Media fournit un ordinateur portable professionnel configuré avec VPN, un écran externe supplémentaire sur demande, et verse une indemnité forfaitaire mensuelle de 15 euros."
+  },
+  {
+    "question": "Quelle est la longueur minimale obligatoire d'un mot de passe et quand doit-il être changé ?",
+    "ground_truth": "Les mots de passe doivent comporter au moins 12 caractères (avec majuscules, minuscules, chiffres et caractères spéciaux) et être modifiés tous les 90 jours."
+  },
+  {
+    "question": "Comment et à qui doit-on signaler une suspicion de phishing ou un incident de sécurité ?",
+    "ground_truth": "Toute anomalie ou suspicion de phishing doit être immédiatement signalée par écrit à l'adresse securite@owlmedia.fr."
+  },
+  {
+    "question": "Est-il autorisé de se connecter sans VPN ou avec son ordinateur personnel pour travailler ?",
+    "ground_truth": "Non, il est strictement interdit d'utiliser un équipement personnel pour accéder aux ressources de l'entreprise. La connexion via le VPN de l'entreprise est obligatoire pour toute activité à distance."
+  }
+]

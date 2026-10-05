@@ -1,0 +1,66 @@
+\chapter*{Conclusion Générale et Perspectives}
+\addcontentsline{toc}{chapter}{Conclusion Générale et Perspectives}
+\markboth{Conclusion Générale et Perspectives}{Conclusion Générale et Perspectives}
+\renewcommand{\labelitemi}{$\bullet$}
+
+\section*{1. Bilan du Travail Réalisé}
+
+\subsection*{Présentation du Résultat Final du Projet Owl Media RAG MLOps}
+Ce Projet de Fin d'Année (PFA), effectué au sein de l'agence digitale \textbf{Owl Media} à Rabat sur une durée de deux mois, s'inscrit dans le cadre de la formation d'Ingénieur en Informatique (Spécialité Intelligence Artificielle et Data Science). L'aboutissement majeur de ce travail est la mise au point et la livraison de la plateforme souveraine \textbf{Owl Media RAG MLOps}, une solution clé en main d'intelligence artificielle générative dédiée à l'interrogation sécurisée, fluide et 100\% locale du patrimoine documentaire d'entreprise en langage naturel.
+
+\subsection*{Rappel des Principales Fonctionnalités Développées}
+La plateforme regroupe un ensemble complet de fonctionnalités et de services à haute valeur ajoutée :
+\begin{itemize}
+    \item \textbf{Ingestion et découpage sémantique multiformat} : Parsing automatique des fichiers PDF, DOCX et TXT, découpage sémantique en chunks de 500 caractères avec chevauchement de 100 caractères, vectorisation via \texttt{nomic-embed-text} ($768$d) et indexation dans Qdrant avec dédoublonnage automatique.
+    \item \textbf{Moteur de Recherche Hybride et Reranking} : Combinaison pondérée de la recherche sémantique dense Qdrant (Cosine) et de la recherche lexicale sparse BM25 ($\alpha=0.70$), suivie d'un réordonnancement fin des candidats par le modèle Cross-Encoder \texttt{ms-marco-MiniLM-L-6-v2}.
+    \item \textbf{Mécanisme de sécurité anti-hallucination} : Filtrage strict par seuil de pertinence ($\text{similarity\_threshold} = 0.30$) avec court-circuit (\texttt{NO\_CONTEXT}) garantissant zéro invention factuelle lorsque le sujet est absent des documents.
+    \item \textbf{Génération souveraine par LLM local} : Synthèse contextuelle fluide et certifiée exécutée localement via le moteur d'inférence Ollama et le modèle \texttt{llama3.2:1b}, sans aucun appel API cloud externe.
+    \item \textbf{Observabilité et Supervision MLOps} : Logging SQLite asynchrone (\texttt{monitoring.db}) avec calcul des latences P50/P95, tracing distribué de l'arbre d'exécution des sous-agents sous Langfuse, versionnement des datasets sous DVC (\texttt{tests/eval\_dataset.json.dvc}) et tracking des benchmarks sous MLflow.
+    \item \textbf{Interface Web responsive (SPA)} : Dashboard moderne offrant un espace de dialogue Chatbot avec volet dépliable des sources citées, un panneau d'administration documentaire et une console de supervision MLOps.
+\end{itemize}
+
+\subsection*{État Final de la Plateforme et Cohérence entre les Différentes Phases}
+L'état final de la plateforme démontre une cohérence et une synergie parfaites entre les différentes phases du projet. Les étapes successives — depuis l'étude théorique de l'état de l'art (Chapitre 2), le cadrage rigoureux des besoins BF01-BF14 / BNF01-BNF07 (Chapitre 3), la conception microservices et UML (Chapitre 4), jusqu'à la réalisation logicielle (Chapitre 5) et l'évaluation expérimentale (Chapitre 6) — s'articulent de manière fluide et déterministe. 
+
+Les campagnes d'évaluation automatisées valident la haute qualité globale de la solution : un taux de fidélité de \textbf{95.8\%} (absence d'hallucinations), un \textit{Hit Rate} de \textbf{96.0\%}, un taux de rejet parfait de \textbf{100\%} sur les questions pièges hors-domaine, et une latence médiane \textbf{P50 de 2.85 secondes} exécutée intégralement en local sur notre station Apple Silicon M1 (8 Go RAM unifiée).
+
+\section*{2. Difficultés Rencontrées}
+Au cours du développement du projet, quatre contraintes et défis techniques majeurs ont dû être surmontés :
+\begin{enumerate}
+    \item \textbf{Contraintes matérielles et gestion de la mémoire RAM (8 Go)} :  
+    \textit{Problème} : L'exécution conjointe du LLM génératif, du modèle d'embedding et de la stack d'observabilité sur une machine restreinte de 8 Go de RAM risquait de provoquer des dépassements de mémoire (\textit{Out Of Memory}).  
+    \textit{Solution} : Sélection du modèle compact et optimisé \texttt{llama3.2:1b} sous Ollama, couplé à une gestion dynamique des contextes et au traitement par lots (\textit{batching}) des embeddings.
+    \item \textbf{Risque d'hallucinations sur les requêtes hors-domaine} :  
+    \textit{Problème} : Les modèles de langage ont tendance à fabuler une réponse fluide même lorsqu'aucune information pertinente n'est présente dans les documents fournis.  
+    \textit{Solution} : Conception et validation expérimentale du filtre de pertinence anti-hallucination par seuil ($\ge 0.30$), court-circuitant le LLM avant toute génération abusive.
+    \item \textbf{Limites de la recherche sémantique pure sur les termes exacts} :  
+    \textit{Problème} : La recherche vectorielle dense manquait parfois des références exactes, codes ou acronymes spécifiques d'Owl Media.  
+    \textit{Solution} : Mise en place de l'architecture \textit{Advanced RAG} combinant la recherche vectorielle sémantique avec la recherche lexicale BM25 (\texttt{rank\_bm25}) et un reranker Cross-Encoder.
+    \item \textbf{Orchestration et traçabilité multi-conteneurs} :  
+    \textit{Problème} : Suivre le parcours exact d'une requête à travers 5 microservices Docker indépendants.  
+    \textit{Solution} : Déploiement du réseau privé \texttt{rag\_network} et du serveur Langfuse couplé à la propagation d'un identifiant universel unique \texttt{query\_id} généré par le backend FastAPI.
+\end{enumerate}
+
+\section*{3. Compétences Acquises}
+La réalisation autonome de ce projet de fin d'année a constitué une opportunité majeure de renforcer et d'acquérir de multiples compétences techniques, méthodologiques et humaines :
+\begin{itemize}
+    \item \textbf{Compétences en IA Générative et NLP} : Maîtrise des pipelines RAG avancés, de la génération d'embeddings vectoriels ($768$d), des modèles de réordonnancement Cross-Encoder, de l'ingénierie de prompts restrictifs et de l'inférence locale d'open-LLMs via Ollama.
+    \item \textbf{Compétences MLOps et DevOps} : Conteneurisation multi-services avec Docker Compose, création d'API REST asynchrones avec FastAPI, versionnement de datasets avec DVC, tracking d'expériences avec MLflow et observabilité distribuée avec Langfuse.
+    \item \textbf{Architecture Logicielle et Génie Logiciel} : Conception orientée objet, modélisation UML complète (Cas d'utilisation, Séquence, Classes, Déploiement), structuration modulaire en couches et gestion de la persistance SQLite et vectorielle (\texttt{Qdrant Rust}).
+    \item \textbf{Compétences Professionnelles} : Autonomie dans la résolution de problèmes complexes, rigueur scientifique dans l'évaluation quantitative des résultats et gestion de projet appliquée à un besoin industriel réel chez Owl Media.
+\end{itemize}
+
+\section*{4. Perspectives d'Amélioration}
+Afin de prolonger les travaux réalisés et d'étendre les capacités de la plateforme Owl Media RAG MLOps, plusieurs perspectives d'évolution technique sont envisagées à moyen terme :
+\begin{enumerate}
+    \item \textbf{Extension au RAG Multimodal et OCR Avancé} :  
+    Intégrer un module d'extraction visuelle basé sur des modèles d'OCR avancés (tels que PaddleOCR ou LayoutLM) afin d'extraire, interpréter et vectoriser les schémas, diagrammes complexes et tableaux scannés présents dans certains documents PDF.
+    \item \textbf{Reformulation et Expansion Automatique de Requêtes (\textit{Query Rewriting})} :  
+    Mettre en place un sous-agent de reformulation de requêtes (utilisant la technique HyDE ou la décomposition de questions complexes) afin d'optimiser le rappel sémantique sur des questions vagues ou formulées de manière ambiguë.
+    \item \textbf{Évolution vers une Architecture Multi-Agents Autonomes} :  
+    Faire évoluer le pipeline linéaire vers une architecture multi-agents autonomes collaboratifs (ex: Agent Chercheur, Agent Vérificateur de Faits, Agent Rédacteur), capables d'exécuter des raisonnements itératifs complexes.
+    \item \textbf{Optimisation de l'Inférence par Quantisation Avancée} :  
+    Explorer l'utilisation de modèles quantisés (ex: GGUF 4-bit) couplés aux accélérateurs matériels NPU/GPU afin de réduire davantage la latence de génération P50 sous la barre des 1.5 seconde.
+\end{enumerate}
+
+En conclusion, ce stage PFA apporte à l'agence \textbf{Owl Media} une plateforme souveraine, robuste et performante, établissant une passerelle concrète entre la recherche en IA générative et le déploiement opérationnel sécurisé en entreprise.

@@ -1,0 +1,197 @@
+\chapter{État de l'Art et Étude Théorique}
+\label{chap:etat_art}
+
+\section{Introduction}
+Ce deuxième chapitre est consacré à l'étude théorique et à l'état de l'art des technologies clés mobilisées dans la réalisation de la plateforme souveraine \textbf{Owl Media RAG MLOps}. Nous présentons d'abord les fondements des Grands Modèles de Langage (\textit{Large Language Models} - LLM) et de l'architecture RAG (\textit{Retrieval-Augmented Generation}), en soulignant les réponses apportées au problème des hallucinations. Nous analysons ensuite les bases de données vectorielles avec une étude comparative des solutions existantes, ainsi que les différentes stratégies de recherche (vectorielle sémantique, mots-clés BM25, hybride et réordonnancement par Cross-Encoder). Enfin, nous étudions les principes du MLOps appliqués à l'observabilité (SQLite, Langfuse) et aux métriques d'évaluation d'un système RAG (MLflow, DVC).
+
+\section{Les Grands Modèles de Langage (LLM)}
+
+\subsection{Définition et Évolution des LLM}
+Un grand modèle de langage (\textit{Large Language Model} - LLM) est un modèle d'apprentissage profond (\textit{Deep Learning}) entraîné de manière auto-supervisée sur d'immenses corpus textuels afin de comprendre, synthétiser et générer du texte en langage naturel. 
+
+L'évolution du Traitement Automatique du Langage Naturel (TALN / NLP) a connu un tournant majeur en 2017 avec l'introduction de l'architecture \textbf{Transformer} par Vaswani et al. Cette rupture technologique a supplanté les réseaux de neurones récurrents traditionnels (RNN, LSTM) en permettant un traitement parallèle des séquences textuelles. Elle a ouvert la voie à des modèles pré-entraînés tels que BERT pour la compréhension et GPT pour la génération, culminant aujourd'hui avec des LLM très performants comme GPT-4, Llama 3 ou Mistral.
+
+\subsection{Fondements Théoriques : L'Architecture Transformer}
+L'architecture Transformer repose sur le mécanisme d'**auto-attention** (\textit{Self-Attention}). Ce mécanisme permet au modèle de calculer une représentation vectorielle contextuelle pour chaque mot en évaluant l'importance relative de tous les autres mots de la séquence, indépendamment de leur distance spatiale.
+
+Mathématiquement, pour une matrice d'entrée représentée sous forme de requêtes ($Q$), clés ($K$) et valeurs ($V$), l'attention est calculée selon l'équation~\ref{eq:attention} :
+
+\begin{equation}
+\label{eq:attention}
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+\end{equation}
+
+où $d_k$ représente la dimension des clés, agissant comme un facteur d'échelle pour éviter la saturation des gradients lors du passage dans la fonction Softmax.
+
+\subsection{Pré-entraînement, Alignement et Génération Autorégressive}
+L'apprentissage d'un LLM s'effectue en deux phases principales :
+\begin{enumerate}
+    \item \textbf{Le pré-entraînement auto-supervisé} : Le modèle est exposé à des corpus textuels massifs (plusieurs milliards de tokens). Il apprend la structure du langage en résolvant une tâche de modélisation causale (\textit{Causal Language Modeling}) qui consiste à prédire le token suivant $w_t$ sachant les tokens précédents $(w_1, \dots, w_{t-1})$.
+    \item \textbf{L'alignement (\textit{Instruction Tuning} \& RLHF)} : Le modèle brut est affiné par apprentissage supervisé et par renforcement à partir de rétroactions humaines (\textit{Reinforcement Learning from Human Feedback} - RLHF) afin de le rendre serviable, inoffensif et conforme aux instructions utilisateur.
+\end{enumerate}
+
+Lors de l'inférence, la génération s'effectue de manière \textbf{autorégressive} (prédiction token par token). La dynamique de génération est régulée par des hyperparamètres clés :
+\begin{itemize}
+    \item \textbf{La Température ($T$)} : Ajuste la variabilité de la distribution de probabilité. Une température proche de 0 produit un décodage quasi-déterministe, tandis qu'une valeur plus élevée favorise la diversité au risque d'incohérences.
+    \item \textbf{Top-P (\textit{Nucleus Sampling})} : Restreint le choix aux seuls tokens dont la probabilité cumulée atteint le seuil $P$ (ex: $0.9$).
+    \item \textbf{La Fenêtre de Contexte (\textit{Context Window})} : Limite maximale de tokens (ex: 4 096, 8 192 ou 131 072 tokens) que le modèle peut traiter simultanément.
+\end{itemize}
+
+\subsection{Typologie des Modèles : Propriétaires vs Open-Weights}
+Dans le paysage actuel, deux grandes catégories de LLM coexistent :
+\begin{itemize}
+    \item \textbf{Les modèles propriétaires hébergés (Cloud APIs)} : Tels que GPT-4o (OpenAI) ou Claude 3.5 (Anthropic). Ils offrent d'excellentes capacités généralistes mais imposent des coûts récurrents à l'usage et l'envoi de données confidentielles vers des serveurs externes.
+    \item \textbf{Les modèles open-weights / locaux} : Tels que Llama 3 (Meta) ou Mistral (exécutés via des moteurs d'inférence locaux comme Ollama). Ils permettent une exécution 100\% autonome sur des serveurs privés ou des machines locales, garantissant la confidentialité des données et la prédictibilité des coûts.
+\end{itemize}
+
+\section{Le Concept de Retrieval-Augmented Generation (RAG)}
+
+\subsection{Principe Général du RAG}
+Formalisé par Lewis et al. en 2020, le paradigme \textbf{RAG} (\textit{Retrieval-Augmented Generation}) associe un système de recherche d'information (\textit{Information Retrieval} - IR) à un modèle génératif (\textit{LLM}).
+
+L'idée centrale du RAG consiste à ne plus s'appuyer uniquement sur la mémoire paramétrique du LLM, mais à lui fournir dynamiquement les passages de documents pertinents issus d'une base de connaissances externe pour construire sa réponse.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{schema_rag_pipeline.png}
+    \caption{Pipeline RAG classique : Du Retrieval à la Génération contextualisée}
+    \label{fig:rag_pipeline}
+\end{figure}
+
+À la différence du ré-entraînement ou du \textit{fine-tuning} (qui exige un temps de calcul considérable et ré-injecte la connaissance de façon statique dans les poids du modèle), le RAG permet de mettre à jour instantanément les connaissances du système par simple ajout ou modification des documents indexés.
+
+\subsection{Limites des LLM Seuls : Le Phénomène d'Hallucination}
+Lorsqu'un LLM est interrogé sans contexte externe sur des questions métier spécifiques ou des documents confidentiels, il est confronté à trois limites majeures :
+\begin{enumerate}
+    \item \textbf{Les Hallucinations} : En raison de sa nature probabiliste visant à générer la suite de mots la plus cohérente, le LLM invente parfois des informations fausses mais formulées avec une grande assurance.
+    \item \textbf{L'absence de connaissances privées et récentes} : Les LLM ne possèdent aucune connaissance des documents internes d'une entreprise et sont soumis au \textit{knowledge cutoff} (date de fin de leur entraînement).
+    \item \textbf{L'absence de traçabilité} : Un LLM seul est incapable d'indiquer la source exacte ou la page de document ayant permis de construire sa réponse.
+\end{enumerate}
+
+Dans un cadre professionnel, ces hallucinations entraînent des risques juridiques et opérationnels inacceptables.
+
+\subsection{Avantages de l'Architecture RAG}
+L'architecture RAG résout directement ces limites en apportant des bénéfices décisifs :
+\begin{itemize}
+    \item \textbf{Ancrage Factuel (\textit{Grounding})} : Les réponses du LLM sont strictly fondées sur des documents réels extraits du système d'information.
+    \item \textbf{Traçabilité et Citations} : Chaque réponse est accompagnée des sources exactes (noms des fichiers, extraits) ayant permis sa génération.
+    \item \textbf{Mise à jour dynamique et faible coût} : L'actualisation de la base documentaire s'effectue sans aucun ré-entraînement de modèle.
+    \item \textbf{Sécurité des données} : Associé à un LLM local, le RAG permet de garantir un traitement 100\% souverain et privé.
+\end{itemize}
+
+\section{Les Bases de Données Vectorielles}
+
+\subsection{Principe de la Recherche Vectorielle}
+Pour rechercher efficacement des passages pertinents, le texte des documents est transformé en vecteurs numériques de haute dimension (ex: 768 dimensions) appelés **embeddings**, à l'aide de modèles d'encodage spécialisés (ex: \textit{Sentence Transformers}). Ces embeddings capturent la signification sémantique des phrases : deux textes exprimant des idées proches possèdent des vecteurs proches géométriquement.
+
+La similarité sémantique entre deux vecteurs $A$ et $B$ s'évalue à l'aide de métriques géométriques, principalement la \textbf{similarité cosinus} (\textit{Cosine Similarity}) :
+
+\begin{equation}
+\label{eq:cosine}
+\text{Similarity}(A, B) = \cos(\theta) = \frac{A \cdot B}{\|A\|_2 \|B\|_2} = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}}
+\end{equation}
+
+Pour garantir des recherches à très faible latence sur des millions de vecteurs, les bases vectorielles utilisent des algorithmes d'indexation approximative des plus proches voisins (\textit{Approximate Nearest Neighbors} - ANN), tels que l'arbre \textbf{HNSW} (\textit{Hierarchical Navigable Small World}).
+
+\subsection{Comparatif des Solutions Existantes et Choix de Qdrant}
+Le tableau~\ref{tab:vector_dbs} présente une étude comparative des principales bases de données vectorielles de l'état de l'art.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Étude comparative des bases de données vectorielles}
+\label{tab:vector_dbs}
+\begin{tabular}{|p{2.0cm}|p{2.6cm}|p{2.6cm}|p{1.8cm}|p{4.5cm}|}
+\hline
+\textbf{Solution} & \textbf{Type} & \textbf{Déploiement} & \textbf{Filtrage Payload} & \textbf{Points Forts / Faiblesses} \\ \hline
+\textbf{Qdrant} & Open-Source (Rust) & Docker 100\% Local & Oui (Avancé) & \textbf{Choisi} : Rapide, faible empreinte RAM, API REST/gRPC et filtrage. \\ \hline
+\textbf{Pinecone} & Propriétaire & Cloud uniquement & Oui & Performant mais non souverain (cloud tiers). \\ \hline
+\textbf{Weaviate} & Open-Source & Hybride (Cloud/Docker) & Oui & Riche en fonctionnalités mais lourd en ressources. \\ \hline
+\textbf{FAISS} & Bibliothèque C++ & En mémoire locale & Non nativement & Très rapide mais pas de persistance ni d'API REST. \\ \hline
+\textbf{ChromaDB} & Open-Source & Local Python & Basique & Idéal pour prototypes, moins adapté à la production. \\ \hline
+\textbf{Milvus} & Open-Source & Distributed Docker & Bon & Très scalable mais architecture lourde. \\ \hline
+\end{tabular}
+\end{table}
+
+Notre choix s'est porté sur \textbf{Qdrant} en raison de son exécution locale conteneurisée (souveraineté), de son écriture en Rust (hautes performances et faible consommation mémoire sur des machines à ressources limitées), et de son support natif des filtres de métadonnées (\texttt{document\_name}, \texttt{chunk\_id}).
+
+\section{Les Stratégies de Recherche}
+
+\subsection{Recherche Sémantique (Vector Search)}
+La recherche sémantique dense projette la question utilisateur et les fragments de texte dans le même espace vectoriel latent. Elle permet d'identifier des passages conceptuellement similaires même s'ils n'utilisent pas exactement les mêmes mots (ex: faire le lien entre \textit{"durée du travail à domicile"} et \textit{"télétravail autorisé"}).
+
+\subsection{Recherche par Mots-clés (Keyword Search / BM25)}
+La recherche sémantique pure peut parfois manquer de précision lorsqu'une question contient des identifiants exacts, des acronymes ou des codes spécifiques (ex: \textit{"politique\_rh\_owlmedia.txt"}). 
+
+Pour pallier cela, l'algorithme probabiliste de recherche par mots-clés \textbf{BM25} (\textit{Best Matching 25}, Robertson et Zaragoza, 2009) calcule un score de correspondance lexicale fondé sur la fréquence du terme (\textit{Term Frequency} - TF) et la fréquence inverse dans le document (\textit{Inverse Document Frequency} - IDF).
+
+\subsection{Recherche Hybride (Hybrid Search)}
+La recherche \textbf{Hybride} combine la recherche vectorielle dense (sémantique) et la recherche BM25 sparse (mots-clés). Notre système fusionne les candidats des deux moteurs en appliquant une pondération paramétrable :
+
+\begin{equation}
+\text{Score}_{\text{Hybride}} = \alpha \cdot \text{Score}_{\text{Vector}} + (1 - \alpha) \cdot \text{Score}_{\text{BM25}} \quad (\text{avec } \alpha = 0.70)
+\end{equation}
+
+Le tableau~\ref{tab:comparatif_retrieval} résume la comparaison entre ces trois stratégies.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Comparaison des stratégies de recherche documentaire}
+\label{tab:comparatif_retrieval}
+\begin{tabular}{|p{2.5cm}|p{3.8cm}|p{3.8cm}|p{3.8cm}|}
+\hline
+\textbf{Stratégie} & \textbf{Avantages} & \textbf{Inconvénients} & \textbf{Cas d'usage idéal} \\ \hline
+\textbf{Vector Search} & Saisit l'intention sémantique et les synonymes. & Échecs sur mots-clés rares ou références exactes. & Questions ouvertes en langage naturel. \\ \hline
+\textbf{Keyword (BM25)} & Correspondance lexicale exacte parfaite. & Pas de compréhension du contexte sémantique. & Recherche de codes, noms propres, termes exacts. \\ \hline
+\textbf{Hybrid Search} & Maximise le rappel et la précision globale. & Nécessite une étape de fusion des scores. & \textbf{RAG Enterprise} sur documentations complexes. \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Le Reranking et les Cross-Encoders}
+Lors du \textit{retrieval} initial, les modèles d'embeddings de première étape (\textbf{Bi-Encoders}) encodent la question et les documents séparément pour des raisons de vitesse. Cette séparation empêche toute interaction directe entre les mots de la question et du document pendant l'encodage.
+
+Pour maximiser la précision, notre architecture intègre une étape de réordonnancement fin (\textbf{Reranking}) basée sur un modèle \textbf{Cross-Encoder} (\texttt{ms-marco-MiniLM-L-6-v2}). Le Cross-Encoder prend en entrée la paire $(\text{Question}, \text{Passage})$ simultanément à travers toutes les couches d'attention du Transformer, produisant un score de pertinence fine beaucoup plus exact (figure~\ref{fig:bi_vs_cross}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{schema_bi_vs_cross_encoder.png}
+    \caption{Comparaison d'architecture : Bi-Encoder (Retrieval rapide) vs Cross-Encoder (Reranking précis)}
+    \label{fig:bi_vs_cross}
+\end{figure}
+
+\section{Le MLOps et l'Observabilité}
+
+\subsection{Définition et Cycle de Vie MLOps}
+Le \textbf{MLOps} (\textit{Machine Learning Operations}) adapte les pratiques DevOps à l'ingénierie des systèmes d'intelligence artificielle. Il englobe le contrôle de version des données et des modèles, l'automatisation des pipelines, la supervision en production et l'évaluation continue.
+
+Dans notre projet, la reproductibilité des datasets de test est assurée par \textbf{DVC} (\textit{Data Version Control}), tandis que le suivi des expérimentations est géré par \textbf{MLflow}.
+
+\subsection{Monitoring et Observabilité des Systèmes IA}
+La supervision d'une plateforme RAG exige d'aller au-delà des métriques système traditionnelles (CPU/RAM). Il est indispensable d'implémenter :
+\begin{itemize}
+    \item \textbf{La Traçabilité des Requêtes (\texttt{query\_id})} : Attribuer un identifiant unique à chaque question pour suivre l'intégralité de son parcours sémantique (\textit{RAG Trace}).
+    \item \textbf{La Décomposition de la Latence} : Mesurer séparément le temps pris par chaque sous-système (Retrieval, Hybrid, Reranking, LLM) afin de calculer les latences moyennes, P50 et P95.
+    \item \textbf{L'Écosystème d'Observabilité} : L'intégration complémentaire de **Langfuse** (plateforme open-source d'observabilité LLM) permettant d'inspecter les traces distribuées et les sous-agents d'exécution.
+\end{itemize}
+
+\subsection{Évaluation Quantitative des Systèmes RAG}
+Pour évaluer scientifiquement la qualité du système sans s'en remettre à des appréciations subjectives, nous calculons **8 métriques quantitatives et de performance** fondamentales :
+\begin{enumerate}
+    \item \textbf{Faithfulness (Fidélité)} : Proportion d'affirmations de la réponse directement justifiées par le contexte extrait (absence d'hallucination).
+    \item \textbf{Answer Relevance (Pertinence de la réponse)} : Degré d'adéquation entre la réponse générée et la question posée.
+    \item \textbf{Answer Correctness (Exactitude)} : Conformité factuelle de la réponse générée par rapport à la réponse de référence (\textit{Ground Truth}).
+    \item \textbf{Context Precision} : Proportion de passages pertinents parmi l'ensemble des fragments extraits lors du retrieval.
+    \item \textbf{Context Recall} : Capacité du système à récupérer l'intégralité des passages pertinents nécessaires pour répondre.
+    \item \textbf{Retrieval Hit Rate} : Pourcentage de questions où au moins un document source correct figure dans les résultats du retrieval.
+    \item \textbf{No Context Rate} : Pourcentage de requêtes court-circuitées par le mécanisme de sécurité anti-hallucination lorsque le contexte est insuffisant.
+    \item \textbf{End-to-End Latency (P50/P95)} : Temps de réponse global et décomposé par étape du pipeline.
+\end{enumerate}
+
+\section{Synthèse et Positionnement du Projet}
+La plateforme \textbf{Owl Media RAG MLOps} se positionne comme une solution d'entreprise d'Advanced RAG souveraine 100\% locale. En combinant la recherche hybride (Vector + BM25), le réordonnancement par Cross-Encoder (\texttt{ms-marco-MiniLM-L-6-v2}), la génération locale via Ollama (Llama 3.2 1B), le filtrage par seuil de pertinence ($0.30$) et un pipeline complet d'observabilité MLOps (SQLite \texttt{monitoring.db}, Langfuse, MLflow, DVC), notre système garantit à la fois une haute précision documentaire, une latence maîtrisée et une transparence totale.
+
+\section{Conclusion}
+Dans ce chapitre, nous avons présenté l'état de l'art théorique nécessaire à la compréhension des technologies RAG et MLOps. Nous avons détaillé le fonctionnement des LLM, le paradigme RAG anti-hallucination, la recherche hybride avec Reranking par Cross-Encoder, ainsi que les métriques d'évaluation MLOps.
+
+Le chapitre suivant sera consacré à l'\textbf{Analyse et spécification des besoins}, où nous étudierons l'existant et modéliserons les exigences fonctionnelles et non-fonctionnelles du système via le langage UML.

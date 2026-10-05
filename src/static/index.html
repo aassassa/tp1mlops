@@ -1,0 +1,4161 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>OWL Media RAG MLOps Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --owl-red: #d93a2b;
+            --owl-red-light: #ff6b5b;
+            --owl-dark: #1a1a1a;
+            --owl-gray: #333;
+            --owl-light: #f5f5f5;
+            --owl-white: #ffffff;
+            --owl-border: #e5e5e5;
+            --owl-text: #1a1a1a;
+            --owl-text-muted: #888;
+            --success: #22c55e;
+            --success-bg: #dcfce7;
+            --success-text: #166534;
+            --warning-bg: #fef3c7;
+            --warning-text: #92400e;
+            --danger-bg: #fee2e2;
+            --danger-text: #dc2626;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--owl-light);
+            color: var(--owl-text);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: 260px;
+            background: var(--owl-dark);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 0;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 0 24px 32px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-brand .logo {
+            width: 38px;
+            height: 38px;
+            background: var(--owl-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 18px;
+        }
+
+        .sidebar-brand .brand-text {
+            font-weight: 800;
+            font-size: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-brand .brand-sub {
+            font-size: 10px;
+            color: #888;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .sidebar-nav {
+            padding: 24px 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            color: #aaa;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+        }
+
+        .nav-item:hover {
+            background: #2a2a2a;
+            color: #fff;
+        }
+
+        .nav-item.active {
+            background: var(--owl-red);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .nav-item .icon {
+            font-size: 16px;
+        }
+
+        .sidebar-status {
+            padding: 16px;
+            border-top: 1px solid #333;
+        }
+
+        .status-card {
+            background: #222;
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        .status-card .label {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+
+        .status-card .status-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-card .status-text {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-card .sub-status {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #666;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main {
+            margin-left: 260px;
+            flex: 1;
+            min-height: 100vh;
+        }
+
+        .top-header {
+            background: #fff;
+            border-bottom: 1px solid var(--owl-border);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .header-title h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--owl-text);
+        }
+
+        .header-title p {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: var(--owl-text-muted);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .api-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            padding: 6px 14px;
+            border-radius: 20px;
+        }
+
+        .api-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+        }
+
+        .api-badge span {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--success-text);
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            background: var(--owl-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .page-content {
+            padding: 32px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .page-section {
+            display: none;
+        }
+
+        .page-section.active {
+            display: block;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .page-header .icon-box {
+            width: 44px;
+            height: 44px;
+            background: var(--owl-red);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 20px;
+        }
+
+        .page-header h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--owl-text);
+        }
+
+        .page-header p {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: var(--owl-text-muted);
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid var(--owl-border);
+            overflow: hidden;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* ===== CHAT ===== */
+        .chat-layout {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 24px;
+        }
+
+        .chat-container {
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid var(--owl-border);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 600px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            background: #fafafa;
+            min-height: 450px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .message-avatar.bot {
+            background: var(--owl-red);
+        }
+
+        .message-avatar.user {
+            background: var(--owl-dark);
+        }
+
+        .message-content {
+            flex: 1;
+        }
+
+        .message.user .message-content {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            padding: 14px 18px;
+            max-width: 80%;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .message-bubble.bot {
+            background: #fff;
+            border: 1px solid var(--owl-border);
+            border-radius: 14px;
+            border-top-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            color: #333;
+        }
+
+        .message-bubble.user {
+            background: var(--owl-red);
+            color: #fff;
+            border-radius: 14px;
+            border-top-right-radius: 4px;
+        }
+
+        .message-bubble p {
+            margin: 0;
+            line-height: 1.7;
+        }
+
+        .message-bubble ul {
+            margin: 10px 0 0;
+            padding-left: 20px;
+            line-height: 1.8;
+        }
+
+        .message-bubble li {
+            margin-bottom: 4px;
+        }
+
+        /* Expander */
+        .expander {
+            margin-top: 8px;
+            background: #f8f8f8;
+            border: 1px solid var(--owl-border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .expander-header {
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            background: #f0f0f0;
+            border: none;
+            width: 100%;
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .expander-header .chevron {
+            margin-left: auto;
+            font-size: 12px;
+            color: #888;
+            transition: transform 0.2s;
+        }
+
+        .expander-header.active .chevron {
+            transform: rotate(180deg);
+        }
+
+        .expander-body {
+            padding: 14px;
+            border-top: 1px solid var(--owl-border);
+            display: none;
+        }
+
+        .expander-body.open {
+            display: block;
+        }
+
+        .source-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--owl-border);
+            margin-bottom: 6px;
+        }
+
+        .source-item .source-info {
+            flex: 1;
+        }
+
+        .source-item .source-name {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .source-item .source-pages {
+            font-size: 11px;
+            color: var(--owl-text-muted);
+        }
+
+        .source-item .source-score {
+            background: var(--owl-red);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .metric-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .metric-box {
+            background: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--owl-border);
+        }
+
+        .metric-box .label {
+            font-size: 11px;
+            color: var(--owl-text-muted);
+            margin-bottom: 6px;
+        }
+
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .progress-track {
+            flex: 1;
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--owl-red), var(--owl-red-light));
+            border-radius: 4px;
+        }
+
+        .progress-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--owl-red);
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--owl-text);
+        }
+
+        .metric-value .unit {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--owl-text-muted);
+        }
+
+        .model-info {
+            background: #fff;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--owl-border);
+            margin-top: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--owl-text);
+        }
+
+        .model-info .label {
+            font-size: 11px;
+            color: var(--owl-text-muted);
+            margin-bottom: 4px;
+            font-weight: normal;
+        }
+
+        .chat-input-area {
+            padding: 16px 24px;
+            background: #fff;
+            border-top: 1px solid var(--owl-border);
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 12px 16px;
+            min-height: 48px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: var(--owl-red);
+        }
+
+        .btn-send {
+            background: var(--owl-red);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+
+        .btn-send:hover {
+            background: #c43325;
+        }
+
+        /* Right panel */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-card {
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid var(--owl-border);
+            padding: 20px;
+        }
+
+        .panel-card h3 {
+            margin: 0 0 14px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--owl-text);
+        }
+
+        .quick-action {
+            background: #f5f5f5;
+            border: 1px solid var(--owl-border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            text-align: left;
+            font-size: 13px;
+            color: #555;
+            cursor: pointer;
+            font-weight: 500;
+            width: 100%;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+
+        .quick-action:hover {
+            background: #eee;
+            border-color: #ccc;
+        }
+
+        .doc-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: #fafafa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .doc-item .doc-info {
+            flex: 1;
+        }
+
+        .doc-item .doc-name {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .doc-item .doc-meta {
+            font-size: 10px;
+            color: var(--owl-text-muted);
+        }
+
+        .stats-dark {
+            background: linear-gradient(135deg, var(--owl-dark), #333);
+            border-radius: 16px;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .stats-dark h3 {
+            margin: 0 0 14px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stats-grid .stat-value {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .stats-grid .stat-label {
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        /* ===== INGESTION ===== */
+        .ingestion-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--owl-red);
+            border-radius: 14px;
+            padding: 40px 24px;
+            text-align: center;
+            background: #fff5f5;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upload-zone:hover {
+            background: #ffeeee;
+        }
+
+        .upload-zone .upload-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .upload-zone .upload-title {
+            margin: 0 0 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--owl-text);
+        }
+
+        .upload-zone .upload-sub {
+            margin: 0;
+            font-size: 12px;
+            color: var(--owl-text-muted);
+        }
+
+        .upload-zone .btn-browse {
+            margin-top: 16px;
+            background: var(--owl-red);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 24px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .file-queue {
+            margin-top: 20px;
+        }
+
+        .file-queue .queue-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f8f8f8;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .queue-item .queue-info {
+            flex: 1;
+        }
+
+        .queue-item .queue-name {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .queue-item .queue-size {
+            font-size: 10px;
+            color: var(--owl-text-muted);
+        }
+
+        .queue-item .queue-remove {
+            font-size: 16px;
+            color: var(--owl-red);
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .chunk-type-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chunk-type {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid var(--owl-border);
+            border-radius: 10px;
+            background: #fff;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chunk-type:hover {
+            border-color: #ccc;
+        }
+
+        .chunk-type.selected {
+            border-color: var(--owl-red);
+            background: #fff5f5;
+        }
+
+        .chunk-type .type-icon {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .chunk-type .type-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #555;
+        }
+
+        .chunk-type.selected .type-name {
+            color: var(--owl-red);
+        }
+
+        .chunk-type .type-desc {
+            font-size: 10px;
+            color: var(--owl-text-muted);
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slider-group input[type="range"] {
+            flex: 1;
+            accent-color: var(--owl-red);
+        }
+
+        .slider-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--owl-red);
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: var(--owl-red);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            font-weight: 800;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #c43325;
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .data-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 700;
+            color: #555;
+            border-bottom: 2px solid var(--owl-border);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #f8f8f8;
+        }
+
+        .data-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .data-table tr:hover td {
+            background: #fafafa;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .badge-success {
+            background: var(--success-bg);
+            color: var(--success-text);
+        }
+
+        .badge-warning {
+            background: var(--warning-bg);
+            color: var(--warning-text);
+        }
+
+        .btn-danger {
+            background: var(--danger-bg);
+            color: var(--danger-text);
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .table-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .search-input {
+            padding: 8px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 13px;
+            width: 180px;
+            font-family: inherit;
+        }
+
+        .btn-filter {
+            background: var(--owl-dark);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        /* ===== MONITORING ===== */
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid var(--owl-border);
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 60px;
+            height: 60px;
+            background: #fff5f5;
+            border-bottom-left-radius: 60px;
+        }
+
+        .metric-card .metric-label {
+            font-size: 11px;
+            color: var(--owl-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .metric-card .metric-number {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--owl-text);
+        }
+
+        .metric-card .metric-trend {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        .monitoring-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .chart-container {
+            height: 220px;
+            position: relative;
+        }
+
+        .bar-chart {
+            height: 220px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 16px;
+            padding-bottom: 30px;
+        }
+
+        .bar-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .bar-group .bar-value {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--owl-red);
+        }
+
+        .bar-group .bar {
+            width: 32px;
+            background: linear-gradient(180deg, var(--owl-red), var(--owl-red-light));
+            border-radius: 6px 6px 0 0;
+            transition: height 0.3s;
+        }
+
+        .bar-group .bar-label {
+            font-size: 10px;
+            color: var(--owl-text-muted);
+        }
+
+        .mlflow-banner {
+            background: linear-gradient(135deg, var(--owl-dark), #2d2d2d);
+            border-radius: 16px;
+            padding: 28px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mlflow-banner h3 {
+            margin: 0 0 8px;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .mlflow-banner p {
+            margin: 0;
+            font-size: 13px;
+            color: #aaa;
+            max-width: 500px;
+        }
+
+        .btn-mlflow {
+            background: var(--owl-red);
+            color: #fff;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .btn-mlflow:hover {
+            background: #c43325;
+        }
+
+        .log-entry {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            background: #f8f8f8;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .log-entry .log-level {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .log-entry .log-time {
+            color: var(--owl-text-muted);
+            font-family: monospace;
+            font-size: 11px;
+            min-width: 70px;
+        }
+
+        .log-entry .log-msg {
+            color: #555;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            margin-top: 48px;
+            padding: 24px 0;
+            border-top: 1px solid var(--owl-border);
+            text-align: center;
+        }
+
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .footer-brand .logo-sm {
+            width: 24px;
+            height: 24px;
+            background: var(--owl-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+        }
+
+        .footer-brand .brand-name {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--owl-text);
+        }
+
+        .footer-brand .sep {
+            color: #aaa;
+        }
+
+        .footer-brand .location {
+            font-size: 13px;
+            color: var(--owl-text-muted);
+        }
+
+        .footer p {
+            margin: 0;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+
+            .chat-layout,
+            .ingestion-grid,
+            .monitoring-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main {
+                margin-left: 0;
+            }
+
+            .metrics-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* --- ECRAN DE CONNEXION (LOGIN SCREEN) --- */
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(26, 26, 26, 0.4);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Styles moved inline to guarantee rendering */
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        .login-presentation-logo {
+            font-size: 64px;
+            margin-bottom: 24px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        .login-presentation h2 {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            line-height: 1.2;
+            letter-spacing: -0.5px;
+        }
+
+        .login-presentation p {
+            font-size: 15px;
+            line-height: 1.7;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .login-header {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .login-logo {
+            font-size: 48px;
+            margin-bottom: 8px;
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--owl-dark);
+            letter-spacing: -0.5px;
+        }
+
+        .login-subtitle {
+            font-size: 14px;
+            color: var(--owl-text-muted);
+        }
+
+        .login-error {
+            background: var(--danger-bg);
+            color: var(--danger-text);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .login-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .login-input-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--owl-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .login-input {
+            width: 100%;
+            height: 44px;
+            border: 1px solid var(--owl-border);
+            border-radius: 8px;
+            padding: 0 16px;
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--owl-text);
+            background: var(--owl-light);
+            transition: all 0.2s ease;
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: var(--owl-red);
+            background: var(--owl-white);
+            box-shadow: 0 0 0 3px rgba(217, 58, 43, 0.15);
+        }
+
+        .login-button {
+            width: 100%;
+            height: 46px;
+            background: var(--owl-red);
+            color: var(--owl-white);
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(217, 58, 43, 0.15);
+        }
+
+        .login-button:hover {
+            background: var(--owl-red-light);
+            box-shadow: 0 4px 16px rgba(217, 58, 43, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+        /* --- USER DISPLAY IN SIDEBAR --- */
+        .user-profile-section {
+            border-top: 1px solid #333;
+            padding: 16px;
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #111;
+        }
+
+        .user-profile-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--owl-red);
+            color: var(--owl-white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .user-profile-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-profile-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-profile-role {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-logout {
+            background: none;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .btn-logout:hover {
+            color: var(--owl-red-light);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            transform: translateY(20px);
+            transition: transform 0.2s ease;
+            overflow: hidden;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8f9fa;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: var(--text-main);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #64748b;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+    </style>
+    <base target="_blank">
+</head>
+
+<body>
+
+    <div id="loginScreen" class="login-screen">
+        <div class="login-card"
+            style="background: var(--owl-white); border: 1px solid var(--owl-border); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08); border-radius: 20px; width: 100%; max-width: 800px; display: flex; flex-direction: row; overflow: hidden; position: relative;">
+            <div class="login-presentation"
+                style="flex: 1; min-width: 300px; background: linear-gradient(135deg, #d93a2b, #b92b1f); color: white; padding: 40px; display: flex; flex-direction: column; justify-content: center;">
+                <div class="login-presentation-logo"><img src="/OWLMedia.png" alt="OWL Media"
+                        style="width: 90px; height: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                </div>
+                <h2
+                    style="font-size: 32px; font-weight: 800; margin-bottom: 16px; line-height: 1.2; letter-spacing: -0.5px;">
+                    OWL Media RAG</h2>
+                <p style="font-size: 15px; line-height: 1.7; opacity: 0.9; font-weight: 400;">Bienvenue sur votre
+                    assistant intelligent d'entreprise. Connectez-vous pour interroger instantanément notre base de
+                    connaissances sécurisée.</p>
+            </div>
+            <div class="login-form-container"
+                style="flex: 1; min-width: 300px; padding: 40px; display: flex; flex-direction: column; background: var(--owl-white);">
+                <div class="login-header" style="text-align:left; margin-bottom:20px; gap:4px;">
+                    <h3 style="font-size: 22px; font-weight: 800; color: var(--owl-dark);">Accès Utilisateur</h3>
+                    <p class="login-subtitle" id="loginSubtitle" style="font-size: 14px; margin-bottom: 10px;">
+                        Connectez-vous pour accéder à l'assistant d'entreprise</p>
+                </div>
+
+                <div
+                    style="display:flex; margin-bottom:24px; background:rgba(0,0,0,0.04); border-radius:8px; padding:4px;">
+                    <button id="tabLoginBtn" type="button" onclick="switchAuthTab('login')"
+                        style="flex:1; padding:10px; border:none; background:var(--owl-red); color:white; border-radius:6px; font-weight:600; cursor:pointer; font-size:14px; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1">
+                            </path>
+                        </svg>
+                        Connexion
+                    </button>
+                    <button id="tabRegisterBtn" type="button" onclick="switchAuthTab('register')"
+                        style="flex:1; padding:10px; border:none; background:transparent; color:#666; border-radius:6px; font-weight:600; cursor:pointer; font-size:14px; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z">
+                            </path>
+                        </svg>
+                        Inscription
+                    </button>
+                </div>
+
+                <div id="loginError" class="login-error" style="margin-bottom: 16px;">
+                    <span></span>
+                    <span id="loginErrorText">Identifiants incorrects.</span>
+                </div>
+
+                <form class="login-form" onsubmit="event.preventDefault(); handleAuthFormSubmit();">
+                    <div class="login-input-group">
+                        <label for="loginUsername">Nom d'utilisateur</label>
+                        <input type="text" id="loginUsername" class="login-input" required placeholder="Ex: amina_rh"
+                            autocomplete="username">
+                    </div>
+
+                    <div class="login-input-group">
+                        <label for="loginPassword">Mot de passe</label>
+                        <input type="password" id="loginPassword" class="login-input" required placeholder="••••••••"
+                            autocomplete="current-password">
+                    </div>
+
+                    <button type="submit" class="login-button" id="authSubmitBtn" style="margin-top: 10px;">
+                        <span id="authSubmitIcon"></span> <span id="authSubmitText">Se connecter</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="logo" style="display:flex; align-items:center; justify-content:center; margin-bottom:8px;"><img
+                    src="/OWLMedia.png" alt="OWL Media" style="width: 44px; height: auto; border-radius: 8px;"></div>
+            <div>
+                <div class="brand-text">OWL Media</div>
+                <div class="brand-sub">RAG MLOps Platform</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <button class="nav-item active" onclick="showPage('chat')">
+                <span class="icon"></span> Chatbot & Recherche
+            </button>
+            <button class="nav-item" onclick="showPage('ingestion')">
+                <span class="icon"></span> Data & Ingestion
+            </button>
+            <button class="nav-item" onclick="showPage('monitoring')">
+                <span class="icon"></span> Monitoring MLOps
+            </button>
+            <button class="nav-item" onclick="showPage('evaluation')">
+                <span class="icon"></span> Évaluation & Benchmark
+            </button>
+            <button class="nav-item" onclick="showPage('config')">
+                <span class="icon"></span> Configuration
+            </button>
+        </nav>
+
+        <div class="sidebar-status">
+            <div class="status-card">
+                <div class="label">Statut Système</div>
+                <div class="status-row">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Tous les services OK</span>
+                </div>
+                <div class="sub-status">API: Connectee • Qdrant: Actif</div>
+            </div>
+        </div>
+
+        <!-- User Profile & Logout -->
+        <div class="user-profile-section">
+            <div class="user-profile-avatar" id="userAvatar">U</div>
+            <div class="user-profile-info">
+                <div class="user-profile-name" id="userName">Utilisateur</div>
+                <div class="user-profile-role" id="userRole">ROLE</div>
+            </div>
+            <button class="btn-logout" onclick="logout()" title="Se déconnecter">
+                Déconnexion
+            </button>
+        </div>
+    </aside>
+
+    <!-- ===== MAIN ===== -->
+    <main class="main">
+
+        <!-- ===== HEADER ===== -->
+        <header class="top-header">
+            <div class="header-title">
+                <h1>Assistant Intelligent Entreprise</h1>
+                <p>Posez vos questions sur les documents indexes</p>
+            </div>
+            <div class="header-actions">
+                <div class="api-badge">
+                    <span class="dot"></span>
+                    <span>Serveur API : Connecte</span>
+                </div>
+                <div class="user-avatar">A</div>
+            </div>
+        </header>
+
+        <div class="page-content">
+
+            <!-- ==================== PAGE 1: CHATBOT ==================== -->
+            <section id="page-chat" class="page-section active">
+                <div class="chat-layout">
+
+                    <!-- Chat Area -->
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chatMessages">
+                        </div>
+
+                        <!-- Input Area -->
+                        <div class="chat-input-area">
+                            <textarea class="chat-input" id="chatInput" rows="1"
+                                placeholder="Posez votre question ici..."></textarea>
+                            <button class="btn-send" onclick="sendMessage()">
+                                Envoyer <span>-&gt;</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel -->
+                    <div class="right-panel">
+                        <!-- Quick Actions -->
+                        <div class="panel-card">
+                            <h3>Actions rapides</h3>
+                            <button class="quick-action">Resumer le dernier document</button>
+                            <button class="quick-action">Rechercher dans tous les docs</button>
+                            <button class="quick-action">Generer un rapport</button>
+                        </div>
+
+                        <!-- Indexed Docs -->
+                        <div class="panel-card">
+                            <h3>Documents indexés</h3>
+                            <div class="doc-item">
+                                <span style="font-size:18px;">D</span>
+                                <div class="doc-info">
+                                    <div class="doc-name">Guide_Auto_PME.pdf</div>
+                                    <div class="doc-meta">42 chunks - Indexe il y a 2j</div>
+                                </div>
+                            </div>
+                            <div class="doc-item">
+                                <span style="font-size:18px;">D</span>
+                                <div class="doc-info">
+                                    <div class="doc-name">Rapport_Marketing_Q1.pdf</div>
+                                    <div class="doc-meta">28 chunks - Indexe il y a 5j</div>
+                                </div>
+                            </div>
+                            <div class="doc-item">
+                                <span style="font-size:18px;">D</span>
+                                <div class="doc-info">
+                                    <div class="doc-name">Strategie_Contenu_2024.docx</div>
+                                    <div class="doc-meta">15 chunks - Indexe il y a 1j</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mini Stats -->
+                        <div class="stats-dark">
+                            <h3>Apercu MLOps</h3>
+                            <div class="stats-grid">
+                                <div>
+                                    <div class="stat-value">1,247</div>
+                                    <div class="stat-label">Chunks indexes</div>
+                                </div>
+                                <div>
+                                    <div class="stat-value">342</div>
+                                    <div class="stat-label">Requetes traitees</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== PAGE 2: INGESTION ==================== -->
+            <section id="page-ingestion" class="page-section">
+                <div class="page-header">
+                    <div class="icon-box"></div>
+                    <div>
+                        <h2>Data & Ingestion</h2>
+                        <p>Gerez vos documents et controlez le pipeline d'indexation</p>
+                    </div>
+                </div>
+
+                <!-- KPI GRID -->
+                <div class="metrics-row" style="margin-bottom: 24px;" id="kpi-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Documents</div>
+                        <div class="metric-number" id="kpi-docs">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Chunks</div>
+                        <div class="metric-number" id="kpi-chunks">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Embeddings</div>
+                        <div class="metric-number" id="kpi-embeddings">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Qdrant</div>
+                        <div class="metric-number" id="kpi-qdrant" style="font-size:18px;">● Verification...</div>
+                    </div>
+                </div>
+
+                <div class="ingestion-grid">
+                    <!-- Upload Zone -->
+                    <div class="card">
+                        <div class="card-body">
+                            <h3 style="margin:0 0 20px; font-size:16px; font-weight:700;">Upload de documents</h3>
+                            <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                                <div class="upload-icon"></div>
+                                <p class="upload-title">Glissez-deposez vos fichiers ici</p>
+                                <p class="upload-sub">PDF, DOCX, TXT (max 50MB)</p>
+                                <button class="btn-browse">Parcourir les fichiers</button>
+                            </div>
+                            <input type="file" id="fileInput" multiple style="display:none;"
+                                onchange="handleFiles(this)">
+
+                            <div class="file-queue">
+                                <div class="queue-label">Fichiers en attente (2)</div>
+                                <div class="queue-item">
+                                    <span style="font-size:18px;">D</span>
+                                    <div class="queue-info">
+                                        <div class="queue-name">Nouveau_Rapport_2024.pdf</div>
+                                        <div class="queue-size">2.4 MB</div>
+                                    </div>
+                                    <button class="queue-remove">x</button>
+                                </div>
+                                <div class="queue-item">
+                                    <span style="font-size:18px;">D</span>
+                                    <div class="queue-info">
+                                        <div class="queue-name">Guide_Interne.docx</div>
+                                        <div class="queue-size">1.1 MB</div>
+                                    </div>
+                                    <button class="queue-remove">x</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pipeline Control -->
+                    <div class="card">
+                        <div class="card-body">
+                            <h3 style="margin:0 0 20px; font-size:16px; font-weight:700;">Controle du Pipeline</h3>
+
+                            <div class="form-group">
+                                <label>Type de decoupage</label>
+                                <div class="chunk-type-selector">
+                                    <div class="chunk-type selected" onclick="selectChunkType(this)">
+                                        <div class="type-icon"></div>
+                                        <div class="type-name">Recursive</div>
+                                        <div class="type-desc">Paragraphes</div>
+                                    </div>
+                                    <div class="chunk-type" onclick="selectChunkType(this)">
+                                        <div class="type-icon"></div>
+                                        <div class="type-name">Semantic</div>
+                                        <div class="type-desc">Par sens</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Taille des chunks</label>
+                                <div class="slider-group">
+                                    <input type="range" id="chunkSize" value="512" min="128" max="2048" step="128"
+                                        oninput="updateSliderValue(this, 'chunkSizeValue')">
+                                    <span class="slider-value" id="chunkSizeValue">512</span>
+                                </div>
+                                <div class="slider-labels">
+                                    <span>128</span>
+                                    <span>2048</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Chevauchement (overlap)</label>
+                                <div class="slider-group">
+                                    <input type="range" id="overlap" value="50" min="0" max="200" step="10"
+                                        oninput="updateSliderValue(this, 'overlapValue')">
+                                    <span class="slider-value" id="overlapValue">50</span>
+                                </div>
+                                <div class="slider-labels">
+                                    <span>0</span>
+                                    <span>200</span>
+                                </div>
+                            </div>
+
+                            <button class="btn-primary" onclick="startIngestion()" id="btnStartIngestion">
+                                Demarrer l'indexation
+                            </button>
+
+                            <!-- Visual Pipeline (Hidden by default) -->
+                            <div id="pipeline-container"
+                                style="display:none; margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
+                                <h4 style="margin:0 0 16px; font-size:14px; font-weight:600;">Progression du Pipeline
+                                </h4>
+
+                                <!-- Extraction -->
+                                <div class="pipeline-step" id="step-extraction">
+                                    <div
+                                        style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+                                        <strong>Text Extraction</strong>
+                                        <span class="step-status">En attente...</span>
+                                    </div>
+                                    <div class="progress-bar"
+                                        style="height:6px; background:#eee; border-radius:3px; overflow:hidden;">
+                                        <div class="progress-fill"
+                                            style="width:0%; height:100%; background:#d93a2b; transition:width 0.3s;">
+                                        </div>
+                                    </div>
+                                    <div class="step-details" style="font-size:11px; color:#888; margin-top:4px;">-
+                                    </div>
+                                </div>
+
+                                <!-- Chunking -->
+                                <div class="pipeline-step" id="step-chunking" style="margin-top:12px;">
+                                    <div
+                                        style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+                                        <strong>Chunking</strong>
+                                        <span class="step-status">En attente...</span>
+                                    </div>
+                                    <div class="progress-bar"
+                                        style="height:6px; background:#eee; border-radius:3px; overflow:hidden;">
+                                        <div class="progress-fill"
+                                            style="width:0%; height:100%; background:#d93a2b; transition:width 0.3s;">
+                                        </div>
+                                    </div>
+                                    <div class="step-details" style="font-size:11px; color:#888; margin-top:4px;">-
+                                    </div>
+                                </div>
+
+                                <!-- Embedding -->
+                                <div class="pipeline-step" id="step-embedding" style="margin-top:12px;">
+                                    <div
+                                        style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+                                        <strong>Embedding</strong>
+                                        <span class="step-status">En attente...</span>
+                                    </div>
+                                    <div class="progress-bar"
+                                        style="height:6px; background:#eee; border-radius:3px; overflow:hidden;">
+                                        <div class="progress-fill"
+                                            style="width:0%; height:100%; background:#d93a2b; transition:width 0.3s;">
+                                        </div>
+                                    </div>
+                                    <div class="step-details" style="font-size:11px; color:#888; margin-top:4px;">-
+                                    </div>
+                                </div>
+
+                                <!-- Qdrant -->
+                                <div class="pipeline-step" id="step-qdrant" style="margin-top:12px;">
+                                    <div
+                                        style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+                                        <strong>Qdrant Insertion</strong>
+                                        <span class="step-status">En attente...</span>
+                                    </div>
+                                    <div class="progress-bar"
+                                        style="height:6px; background:#eee; border-radius:3px; overflow:hidden;">
+                                        <div class="progress-fill"
+                                            style="width:0%; height:100%; background:#10b981; transition:width 0.3s;">
+                                        </div>
+                                    </div>
+                                    <div class="step-details" style="font-size:11px; color:#888; margin-top:4px;">-
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documents Table -->
+                <div class="card" style="padding:24px;">
+                    <div class="table-toolbar">
+                        <h3 style="margin:0; font-size:16px; font-weight:700;">Documents indexes dans Qdrant</h3>
+                        <div style="display:flex; gap:8px;">
+                            <input type="text" class="search-input" placeholder="Rechercher...">
+                            <button class="btn-filter">Filtrer</button>
+                        </div>
+                    </div>
+
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nom du document</th>
+                                <th>Type</th>
+                                <th style="text-align:center;">Chunks</th>
+                                <th style="text-align:center;">Taille</th>
+                                <th style="text-align:center;">Indexé le</th>
+                                <th style="text-align:center;">Statut</th>
+                                <th style="text-align:center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="documentsTableBody">
+                            <!-- Les documents seront charges dynamiquement ici -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Modale Preview Chunks -->
+                <div id="chunkModal" class="modal"
+                    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+                    <div class="modal-content"
+                        style="background:#fff; width:80%; max-width:800px; max-height:80vh; border-radius:12px; display:flex; flex-direction:column;">
+                        <div
+                            style="padding:20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="margin:0; font-size:18px;">Inspection des Chunks : <span
+                                    id="chunkModalTitle"></span></h3>
+                            <button onclick="document.getElementById('chunkModal').style.display='none'"
+                                style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+                        </div>
+                        <div id="chunkModalBody" style="padding:20px; overflow-y:auto; flex:1; background:#f9fafb;">
+                            <!-- Chunks listés ici -->
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <!-- Modale Reindexation -->
+        <div id="reindexModal" class="modal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+            <div class="modal-content"
+                style="background:#fff; width:90%; max-width:500px; border-radius:12px; display:flex; flex-direction:column;">
+                <div
+                    style="padding:20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0; font-size:18px;">Réindexer : <span id="reindexModalTitle"></span></h3>
+                    <button onclick="document.getElementById('reindexModal').style.display='none'"
+                        style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+                </div>
+                <div style="padding:24px;">
+                    <input type="hidden" id="reindexFilename">
+
+                    <div class="form-group">
+                        <label>Stratégie de Chunking</label>
+                        <div class="chunk-type-selector">
+                            <div class="chunk-type selected" onclick="selectReindexChunkType(this)">
+                                <div class="type-icon"></div>
+                                <div class="type-name">Recursive</div>
+                                <div class="type-desc">Basé sur la longueur</div>
+                            </div>
+                            <div class="chunk-type" onclick="selectReindexChunkType(this)">
+                                <div class="type-icon"></div>
+                                <div class="type-name">Semantic</div>
+                                <div class="type-desc">Basé sur le sens</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Taille du Chunk (tokens)</label>
+                        <div class="slider-group">
+                            <input type="range" id="reindexChunkSize" value="500" min="128" max="2048" step="64"
+                                oninput="updateSliderValue(this, 'reindexChunkSizeValue')">
+                            <span class="slider-value" id="reindexChunkSizeValue">500</span>
+                        </div>
+                        <div class="slider-labels">
+                            <span>128</span>
+                            <span>2048</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:24px;">
+                        <label>Chevauchement (overlap)</label>
+                        <div class="slider-group">
+                            <input type="range" id="reindexOverlap" value="50" min="0" max="200" step="10"
+                                oninput="updateSliderValue(this, 'reindexOverlapValue')">
+                            <span class="slider-value" id="reindexOverlapValue">50</span>
+                        </div>
+                        <div class="slider-labels">
+                            <span>0</span>
+                            <span>200</span>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="startReindex()">
+                        Lancer la réindexation
+                    </button>
+                </div>
+            </div>
+        </div>
+        </section>
+
+        <!-- ==================== PAGE 3: MONITORING ==================== -->
+        <section id="page-monitoring" class="page-section">
+            <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-end;">
+                <div>
+                    <h2>Monitoring MLOps</h2>
+                    <p>Tableau de bord de performance et observabilite</p>
+                </div>
+                <div style="display:flex; gap:16px; align-items:center;">
+                    <select id="metricsPeriod" onchange="fetchMetrics()" class="search-input"
+                        style="height:38px; width:auto; padding:0 12px; font-weight:600;">
+                        <option value="1h">Last 1 hour</option>
+                        <option value="24h" selected>Last 24 hours</option>
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d">Last 30 days</option>
+                    </select>
+                    <select id="metricsRefresh" onchange="setupAutoRefresh()" class="search-input"
+                        style="height:38px; width:auto; padding:0 12px;">
+                        <option value="0">Auto-refresh: OFF</option>
+                        <option value="10">Refresh: 10s</option>
+                        <option value="30">Refresh: 30s</option>
+                        <option value="60">Refresh: 60s</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="systemHealthBanner"
+                style="display:flex; gap:16px; margin-bottom:24px; padding:16px; background:white; border-radius:12px; border:1px solid var(--owl-border);">
+                <!-- Populated dynamically via JS -->
+            </div>
+
+            <!-- Metrics Cards -->
+            <div class="metrics-row" id="kpiCards">
+                <!-- Populated dynamically -->
+            </div>
+
+            <div class="monitoring-grid">
+                <!-- Latency Chart -->
+                <div class="card" style="padding:24px;">
+                    <h3 style="margin:0 0 20px; font-size:16px; font-weight:700;">Latence moy. par étape (ms)</h3>
+                    <div class="chart-container" style="height:250px;">
+                        <canvas id="latencyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Retrieval Breakdown -->
+                <div class="card" style="padding:24px;">
+                    <h3 style="margin:0 0 20px; font-size:16px; font-weight:700;">Retrieval & Reranking</h3>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                        <div style="height:250px;">
+                            <canvas id="retrievalChart"></canvas>
+                        </div>
+                        <div style="display:flex; flex-direction:column; justify-content:center; gap:12px;"
+                            id="rerankingStats">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trace Explorer & Logs Grid -->
+            <div style="display:grid; grid-template-columns: 1fr 2fr; gap:24px; margin-top:24px;">
+                <!-- Trace Explorer -->
+                <div class="card" style="padding: 24px;">
+                    <h3 style="margin: 0 0 20px; font-size: 16px; font-weight: 700;"> Trace Explorer</h3>
+                    <div style="display:flex; gap:8px; margin-bottom:16px;">
+                        <input type="text" id="traceSearchId" class="search-input"
+                            placeholder="query_id (ex: q_8f31a...)" style="flex:1;">
+                        <button class="btn-primary" onclick="searchTrace()"
+                            style="padding:8px 12px; font-size:12px;">Chercher</button>
+                    </div>
+                    <div id="traceResult"
+                        style="background:#fafafa; border:1px solid var(--owl-border); border-radius:8px; padding:16px; min-height:150px; font-size:13px; font-family:monospace; white-space:pre-wrap; overflow-x:auto;">
+                        Entrez un query_id pour voir le détail de l'exécution RAG.
+                    </div>
+                </div>
+
+                <!-- Live Logs -->
+                <div class="card" style="padding: 24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Live Logs</h3>
+                        <select id="logLevelFilter" onchange="fetchLogs()" class="search-input"
+                            style="padding:6px; font-size:12px;">
+                            <option value="ALL">ALL LEVELS</option>
+                            <option value="INFO">INFO</option>
+                            <option value="ERROR">ERROR</option>
+                            <option value="SUCCESS">SUCCESS</option>
+                        </select>
+                    </div>
+                    <div id="logsContainer"
+                        style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-family: monospace; font-size: 12px; background: #fafafa; padding: 16px; border-radius: 8px; border: 1px solid var(--owl-border);">
+                        <!-- Logs populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- MLflow / Langfuse Banner -->
+            <div class="mlflow-banner" style="margin-top: 24px; display:flex; gap:24px;">
+                <div
+                    style="flex:1; background:linear-gradient(135deg, #2563eb, #1d4ed8); padding:24px; border-radius:12px; color:white; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 style="margin:0 0 8px;">Langfuse (Traces LLM Complètes)</h3>
+                        <p style="margin:0; opacity:0.9; font-size:14px;">Accéder à l'interface Langfuse pour le
+                            debugging approfondi des prompts et des générations.</p>
+                    </div>
+                    <a href="http://localhost:3000" target="_blank"
+                        style="background:white; color:#1d4ed8; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px;">Ouvrir
+                        Langfuse</a>
+                </div>
+                <div
+                    style="flex:1; background:linear-gradient(135deg, #0f172a, #1e293b); padding:24px; border-radius:12px; color:white; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 style="margin:0 0 8px;">MLflow (Expériences & Modèles)</h3>
+                        <p style="margin:0; opacity:0.9; font-size:14px;">Comparer les runs d'évaluation et de tracking
+                            RAG hors-ligne.</p>
+                    </div>
+                    <a href="http://localhost:5001" target="_blank"
+                        style="background:white; color:#0f172a; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px;">Ouvrir
+                        MLflow</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== PAGE: EVALUATION & BENCHMARKING ==================== -->
+        <section id="page-evaluation" class="page-section">
+            <div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div class="icon-box"></div>
+                    <div>
+                        <h2 style="margin:0;">Évaluation & Benchmarking RAG</h2>
+                        <p style="margin:0; color:var(--owl-text-muted);">Mesure de la fidélité, pertinence, exactitude
+                            et benchmark comparatif Matrix (MLflow)</p>
+                    </div>
+                </div>
+                <div>
+                    <a href="http://localhost:5001" target="_blank" class="btn-primary"
+                        style="text-decoration:none; padding:8px 16px; font-size:13px; background:#1e293b;">
+                        MLflow Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Dataset Card & Config Card -->
+            <div style="display:grid; grid-template-columns: 1fr 2fr; gap:20px; margin-bottom:24px;">
+                <!-- Dataset Details -->
+                <div class="panel-card"
+                    style="background:#fff; padding:20px; border-radius:12px; border:1px solid var(--owl-border);">
+                    <h3 style="margin:0 0 12px; font-size:15px; font-weight:700; color:var(--owl-dark);">Dataset de
+                        Benchmark</h3>
+                    <div style="font-size:13px; line-height:1.6; color:#475569;">
+                        <div><strong>Fichier :</strong> <code>tests/eval_dataset.json</code></div>
+                        <div><strong>Questions :</strong> 6 cas de test annotés</div>
+                        <div><strong>Ground Truth :</strong> Réponses de référence</div>
+                        <div><strong>Versionning :</strong> Tracké via DVC</div>
+                    </div>
+                </div>
+
+                <!-- Launch Config -->
+                <div class="panel-card"
+                    style="background:#fff; padding:20px; border-radius:12px; border:1px solid var(--owl-border);">
+                    <h3 style="margin:0 0 12px; font-size:15px; font-weight:700; color:var(--owl-dark);"> Configuration
+                        du Run</h3>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:12px; margin-bottom:16px;">
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">MODE RETRIEVAL</label>
+                            <select id="evalMode" class="search-input"
+                                style="width:100%; height:36px; padding:0 8px; font-size:13px;">
+                                <option value="hybrid" selected>Hybrid (BM25 + Dense)</option>
+                                <option value="vector">Vector (Dense)</option>
+                                <option value="keyword">Keyword (BM25)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">RERANKING</label>
+                            <select id="evalRerank" class="search-input"
+                                style="width:100%; height:36px; padding:0 8px; font-size:13px;">
+                                <option value="true" selected>ON (Cross-Encoder)</option>
+                                <option value="false">OFF</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">TOP K</label>
+                            <input type="number" id="evalTopK" value="3" min="1" max="10" class="search-input"
+                                style="width:100%; height:36px; padding:0 8px; font-size:13px;">
+                        </div>
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:#64748b;">SIMILARITÉ THRESHOLD</label>
+                            <input type="number" id="evalThreshold" value="0.70" step="0.05" min="0" max="1"
+                                class="search-input" style="width:100%; height:36px; padding:0 8px; font-size:13px;">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:12px;">
+                        <button class="btn-primary" id="btnStartEval" onclick="startSingleEval()"
+                            style="flex:1; padding:10px;">
+                            Lancer l'Évaluation Simple
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Tracker Container -->
+            <div id="evalProgressCard"
+                style="display:none; background:#fff; padding:20px; border-radius:12px; border:1px solid var(--owl-border); margin-bottom:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <strong style="font-size:14px; color:var(--owl-dark);" id="evalProgressTitle">Évaluation en
+                        cours...</strong>
+                    <span style="font-size:13px; font-weight:bold; color:var(--owl-red);" id="evalProgressPct">0%</span>
+                </div>
+                <div style="background:#f1f5f9; height:10px; border-radius:5px; overflow:hidden; margin-bottom:8px;">
+                    <div id="evalProgressBar"
+                        style="background:var(--owl-red); height:100%; width:0%; transition:width 0.3s;"></div>
+                </div>
+                <div style="font-size:12px; color:#64748b;" id="evalProgressDetails">Initialisation...</div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="evalEmptyState"
+                style="background:#fff; padding:40px; text-align:center; border-radius:12px; border:1px solid var(--owl-border); margin-bottom:24px;">
+
+                <h3 style="margin:0 0 8px; font-size:16px; color:#334155;">Aucun résultat d'évaluation disponible</h3>
+                <p style="margin:0; font-size:13px; color:#94a3b8;">Cliquez sur <strong>"Lancer l'Évaluation
+                        Simple"</strong> pour calculer les métriques réelles.</p>
+            </div>
+
+            <!-- KPI Cards Grid (Results Dashboard) -->
+            <div id="evalResultsContainer" style="display:none;">
+                <h3 style="margin:0 0 16px; font-size:16px; font-weight:700; color:var(--owl-dark);">Métriques Globales
+                    du Run</h3>
+
+                <div class="metrics-row" id="evalKpiCards"
+                    style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:16px; margin-bottom:24px;">
+                    <!-- Injected dynamically -->
+                </div>
+
+                <!-- Detailed Question-level Table -->
+                <div class="card"
+                    style="background:#fff; padding:20px; border-radius:12px; border:1px solid var(--owl-border); margin-bottom:24px;">
+                    <h3 style="margin:0 0 16px; font-size:15px; font-weight:700; color:var(--owl-dark);">Résultats
+                        Détaillés par Question</h3>
+                    <div style="overflow-x:auto;">
+                        <table class="data-table" style="width:100%; border-collapse:collapse; font-size:12px;">
+                            <thead>
+                                <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0; text-align:left;">
+                                    <th style="padding:10px;">Question</th>
+                                    <th style="padding:10px;">Faithfulness</th>
+                                    <th style="padding:10px;">Relevance</th>
+                                    <th style="padding:10px;">Correctness</th>
+                                    <th style="padding:10px;">Precision</th>
+                                    <th style="padding:10px;">Recall</th>
+                                    <th style="padding:10px;">Global Score</th>
+                                    <th style="padding:10px;">Latence</th>
+                                    <th style="padding:10px;">Trace</th>
+                                </tr>
+                            </thead>
+                            <tbody id="evalQuestionsTableBody">
+                                <!-- Injected dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== PAGE 4: CONFIGURATION ==================== -->
+        <section id="page-config" class="page-section">
+            <div class="page-header">
+                <div class="icon-box"></div>
+                <div>
+                    <h2>Configuration Système</h2>
+                    <p>Configurez les endpoints de l'API et les modèles d'intelligence artificielle</p>
+                </div>
+            </div>
+
+            <div class="card" style="max-width: 800px; margin: 0 auto;">
+                <div class="card-body">
+                    <h3 style="margin: 0 0 20px; font-size: 16px; font-weight: 700;">Paramètres Généraux</h3>
+
+                    <div class="form-group">
+                        <label>Endpoint Qdrant</label>
+                        <input type="text" id="configQdrant" value="http://localhost:6333" class="search-input"
+                            style="width:100%; height:42px; padding: 8px 14px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Endpoint Ollama (Embeddings & LLM)</label>
+                        <input type="text" id="configOllama" value="http://localhost:11434" class="search-input"
+                            style="width:100%; height:42px; padding: 8px 14px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Modèle d'Embeddings</label>
+                        <input type="text" id="configEmbeddings" value="nomic-embed-text" class="search-input"
+                            style="width:100%; height:42px; padding: 8px 14px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Modèle LLM de Génération</label>
+                        <input type="text" id="configLLM" value="llama3.2:1b" class="search-input"
+                            style="width:100%; height:42px; padding: 8px 14px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Prompt Système (Règles métier)</label>
+                        <textarea id="configSystemPrompt" class="chat-input" rows="4"
+                            style="width:100%; padding: 12px 16px;">Vous êtes un assistant IA intelligent et expert de l'entreprise. Répondez de manière claire à partir du contexte fourni ci-dessous. Si la réponse exacte n'est pas présente, mais que le contexte donne des éléments pertinents, utilisez-les. Si le sujet est totalement absent, indiquez : 'L'information n'est pas disponible dans les documents fournis'.</textarea>
+                    </div>
+
+                    <h3
+                        style="margin: 30px 0 20px; font-size: 16px; font-weight: 700; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                        Paramètres de Recherche RAG</h3>
+
+                    <div class="form-group">
+                        <label>Mode de Recherche (Retrieval Mode)</label>
+                        <select id="configRetrievalMode" class="search-input"
+                            style="width:100%; height:42px; padding: 8px 14px; background: white;">
+                            <option value="hybrid">Hybride (Vectoriel + Mots-clés)</option>
+                            <option value="vector">Vectoriel uniquement (Sémantique)</option>
+                            <option value="keyword">Mots-clés uniquement (BM25)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="display: flex; gap: 16px;">
+                        <div style="flex: 1;">
+                            <label>Nombre de résultats finaux (Top K)</label>
+                            <input type="number" id="configTopK" value="5" min="1" max="10" class="search-input"
+                                style="width:100%; height:42px; padding: 8px 14px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label>Candidats initiaux (Top N)</label>
+                            <input type="number" id="configTopN" value="20" min="5" max="50" class="search-input"
+                                style="width:100%; height:42px; padding: 8px 14px;">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="display: flex; gap: 16px;">
+                        <div style="flex: 1;">
+                            <label>Seuil de Similarité (%)</label>
+                            <input type="number" id="configSimilarity" value="70" min="0" max="100" class="search-input"
+                                style="width:100%; height:42px; padding: 8px 14px;">
+                        </div>
+                        <div style="flex: 1; display: flex; align-items: flex-end; padding-bottom: 10px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="configReranking" checked style="width: 18px; height: 18px;">
+                                Activer le Reranking (Cross-Encoder)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="display: flex; gap: 16px;">
+                        <div style="flex: 1;">
+                            <label>Poids Vectoriel (Hybride)</label>
+                            <input type="number" id="configWeightVector" value="0.70" min="0" max="1" step="0.05"
+                                class="search-input" style="width:100%; height:42px; padding: 8px 14px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label>Poids Mots-clés (Hybride)</label>
+                            <input type="number" id="configWeightKeyword" value="0.30" min="0" max="1" step="0.05"
+                                class="search-input" style="width:100%; height:42px; padding: 8px 14px;">
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="saveConfiguration()" style="margin-top: 10px;">
+                        Enregistrer la configuration
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        </div>
+
+        <!-- ===== FOOTER ===== -->
+        <footer class="footer">
+            <div class="footer-brand">
+                <div class="logo-sm" style="display:flex; align-items:center; justify-content:center;"><img
+                        src="/OWLMedia.png" alt="OWL Media" style="width: 28px; height: auto; border-radius: 6px;">
+                </div>
+                <div class="brand-name">OWL Media RAG</div>
+                <span class="sep">•</span>
+                <div class="location">Paris, FR</div>
+            </div>
+            <p>© 2026 OWL Media. Plateforme de RAG intelligente & MLOps.</p>
+        </footer>
+
+    </main>
+
+    <!-- ===== SCRIPTS JAVASCRIPT ===== -->
+    <script>
+        // --- AUTHENTICATION & RBAC LOGIC ---
+        let currentAuthMode = 'login';
+
+        function switchAuthTab(mode) {
+            currentAuthMode = mode;
+            const loginBtn = document.getElementById('tabLoginBtn');
+            const registerBtn = document.getElementById('tabRegisterBtn');
+            const submitText = document.getElementById('authSubmitText');
+            const submitIcon = document.getElementById('authSubmitIcon');
+            const subtitle = document.getElementById('loginSubtitle');
+            const errorDiv = document.getElementById('loginError');
+
+            errorDiv.style.display = 'none';
+
+            if (mode === 'login') {
+                loginBtn.style.background = 'var(--owl-red)';
+                loginBtn.style.color = 'white';
+                registerBtn.style.background = 'transparent';
+                registerBtn.style.color = '#666';
+                submitIcon.innerHTML = '';
+                submitText.innerHTML = 'Se connecter';
+                subtitle.innerText = "Connectez-vous pour accéder à l'assistant d'entreprise";
+            } else {
+                registerBtn.style.background = 'var(--owl-red)';
+                registerBtn.style.color = 'white';
+                loginBtn.style.background = 'transparent';
+                loginBtn.style.color = '#666';
+                submitIcon.innerHTML = '';
+                submitText.innerHTML = "S'inscrire";
+                subtitle.innerText = "Créez votre compte pour utiliser l'assistant";
+            }
+        }
+
+        async function handleAuthFormSubmit() {
+            if (currentAuthMode === 'login') {
+                await submitLogin();
+            } else {
+                await submitRegister();
+            }
+        }
+
+        async function submitRegister() {
+            const usernameInput = document.getElementById('loginUsername');
+            const passwordInput = document.getElementById('loginPassword');
+            const errorDiv = document.getElementById('loginError');
+            const errorText = document.getElementById('loginErrorText');
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            if (!username || !password) return;
+
+            errorDiv.style.display = 'none';
+            errorDiv.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            errorDiv.style.color = '#ef4444';
+
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.detail || "Erreur lors de l'inscription.");
+                }
+
+                errorText.innerText = "Inscription réussie ! Veuillez vous connecter.";
+                errorDiv.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                errorDiv.style.color = '#10b981';
+                errorDiv.style.display = 'flex';
+
+                setTimeout(() => {
+                    switchAuthTab('login');
+                    passwordInput.value = '';
+                    errorDiv.style.display = 'none';
+                    errorDiv.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                    errorDiv.style.color = '#ef4444';
+                }, 2000);
+
+            } catch (err) {
+                errorText.innerText = err.message;
+                errorDiv.style.display = 'flex';
+            }
+        }
+
+        async function submitLogin() {
+            const usernameInput = document.getElementById('loginUsername');
+            const passwordInput = document.getElementById('loginPassword');
+            const errorDiv = document.getElementById('loginError');
+            const errorText = document.getElementById('loginErrorText');
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            if (!username || !password) return;
+
+            errorDiv.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.detail || "Identifiants ou mot de passe incorrect.");
+                }
+
+                const data = await res.json();
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('role', data.role);
+                localStorage.setItem('username', data.username);
+
+                document.getElementById('loginScreen').style.display = 'none';
+
+                applyRBAC(data.role);
+                updateUserProfile(data.username, data.role);
+
+                // Restore chat history for this user
+                loadChatHistory(data.username);
+
+                refreshData();
+
+                addSystemLog(`Utilisateur ${data.username} connecté avec le rôle ${data.role.toUpperCase()}`, 'SUCCESS');
+            } catch (err) {
+                errorText.innerText = err.message;
+                errorDiv.style.display = 'flex';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            localStorage.removeItem('username');
+
+            // Afficher l'écran de login
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginError').style.display = 'none';
+
+            // Vider l'historique du chat
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+                chatMessages.innerHTML = `
+                <div class="message">
+                    <div class="message-avatar bot"><img src="/OWLMedia.png" style="width:100%; height:100%; border-radius:50%; object-fit:cover;"></div>
+                    <div class="message-content">
+                        <div class="message-bubble bot">
+                            <p>Bonjour ! Je suis votre assistant RAG OWL Media. Je peux repondre a vos questions en me basant sur les documents indexes dans notre base de connaissances. Comment puis-je vous aider aujourd'hui ?</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            }
+        }
+
+        function applyRBAC(role) {
+            const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
+            const mlflowBanner = document.querySelector('.mlflow-banner');
+            const miniStats = document.querySelector('.stats-dark');
+
+            if (role === 'user') {
+                // Masquer tous les onglets d'administration pour un utilisateur simple
+                navItems.forEach(btn => {
+                    const text = btn.innerText.toLowerCase();
+                    if (text.includes('data') || text.includes('monitoring') || text.includes('évaluation') || text.includes('evaluation') || text.includes('benchmark') || text.includes('configuration')) {
+                        btn.style.display = 'none';
+                    }
+                });
+                // Masquer les éléments MLflow et statistiques
+                if (mlflowBanner) mlflowBanner.style.display = 'none';
+                if (miniStats) miniStats.style.display = 'none';
+
+                // Forcer l'affichage de la page de chat
+                showPage('chat');
+            } else {
+                // Afficher tout pour l'admin
+                navItems.forEach(btn => {
+                    btn.style.display = 'flex';
+                });
+                if (mlflowBanner) mlflowBanner.style.display = 'flex';
+                if (miniStats) miniStats.style.display = 'block';
+            }
+        }
+
+        function updateUserProfile(username, role) {
+            document.getElementById('userName').innerText = username;
+            document.getElementById('userRole').innerText = role === 'admin' ? 'Administrateur' : 'Collaborateur';
+            document.getElementById('userAvatar').innerText = username.charAt(0).toUpperCase();
+        }
+
+        async function authFetch(url, options = {}) {
+            const token = localStorage.getItem('token');
+            if (!options.headers) {
+                options.headers = {};
+            }
+            if (token) {
+                options.headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(url, options);
+            if (response.status === 401) {
+                logout();
+                throw new Error("Session expirée. Veuillez vous reconnecter.");
+            }
+            return response;
+        }
+
+        // Navigation par onglets avec contrôle d'accès par rôle (RBAC)
+        function showPage(pageId) {
+            const role = localStorage.getItem('role') || 'user';
+            if (role === 'user' && pageId !== 'chat') {
+                pageId = 'chat';
+            }
+
+            // Cacher toutes les sections
+            document.querySelectorAll('.page-section').forEach(sec => {
+                sec.classList.remove('active');
+            });
+            // Retirer la classe active de tous les boutons de navigation
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Afficher la section demandée
+            const activeSection = document.getElementById('page-' + pageId);
+            if (activeSection) {
+                activeSection.classList.add('active');
+            }
+
+            // Rendre actif le bouton de navigation correspondant
+            const navButtons = document.querySelectorAll('.nav-item');
+            navButtons.forEach(btn => {
+                if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(pageId)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Si passage sur l'onglet Monitoring, rafraîchir les métriques et redessiner les graphiques après le reflow du DOM
+            if (pageId === 'monitoring') {
+                setTimeout(() => {
+                    if (typeof fetchHealth === 'function') fetchHealth();
+                    if (typeof fetchMetrics === 'function') fetchMetrics();
+                    if (typeof fetchLogs === 'function') fetchLogs();
+                }, 50);
+            }
+
+            if (pageId === 'evaluation') {
+                setTimeout(() => {
+                    if (typeof checkLastEvalHistory === 'function') checkLastEvalHistory();
+                }, 50);
+            }
+        }
+
+        // Toggle Source expander
+        function toggleExpander(btn) {
+            btn.classList.toggle('active');
+            const body = btn.nextElementSibling;
+            body.classList.toggle('open');
+        }
+
+        // Basic Markdown Formatting Helper
+        function formatMarkdown(text) {
+            let html = text;
+
+            // Escape HTML to prevent XSS
+            html = html
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+
+            // Restore formatting tokens
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+            // Bullet lists formatting
+            if (html.includes('\n- ') || html.includes('\n* ')) {
+                const lines = html.split('\n');
+                let inList = false;
+                let newHtml = '';
+                for (let line of lines) {
+                    if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+                        if (!inList) {
+                            newHtml += '<ul style="margin: 8px 0 8px 20px; line-height: 1.6;">';
+                            inList = true;
+                        }
+                        newHtml += `<li>${line.trim().substring(2)}</li>`;
+                    } else {
+                        if (inList) {
+                            newHtml += '</ul>';
+                            inList = false;
+                        }
+                        newHtml += line + '\n';
+                    }
+                }
+                if (inList) newHtml += '</ul>';
+                html = newHtml;
+            }
+
+            // Paragraph splits
+            html = html.split('\n\n').map(p => {
+                if (p.trim().startsWith('<ul') || p.trim().startsWith('<li') || p.trim().startsWith('</ul')) return p;
+                return `<p style="margin-bottom: 10px; line-height: 1.6;">${p.replace(/\n/g, '<br>')}</p>`;
+            }).join('');
+
+            return html;
+        }
+
+        // Helper for chat bubbles
+        function appendMessage(sender, text) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = `message-avatar ${sender}`;
+            if (sender === 'user') {
+                avatarDiv.innerText = 'U';
+            } else {
+                avatarDiv.innerHTML = '<img src="/OWLMedia.png" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">';
+            }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = `message-bubble ${sender}`;
+            bubbleDiv.innerHTML = sender === 'user' ? `<p>${text}</p>` : formatMarkdown(text);
+
+            contentDiv.appendChild(bubbleDiv);
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Append loading spinner
+        let loaderIndex = 0;
+        function appendLoaderMessage() {
+            const id = `loader-${loaderIndex++}`;
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+            messageDiv.id = id;
+
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'message-avatar bot';
+            avatarDiv.innerHTML = '<img src="/OWLMedia.png" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble bot';
+            bubbleDiv.innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="dot" style="width:6px; height:6px; background:#d93a2b; border-radius:50%; animation: pulse 1s infinite alternate;"></span>
+                <span class="dot" style="width:6px; height:6px; background:#d93a2b; border-radius:50%; animation: pulse 1s infinite alternate; animation-delay: 0.2s;"></span>
+                <span class="dot" style="width:6px; height:6px; background:#d93a2b; border-radius:50%; animation: pulse 1s infinite alternate; animation-delay: 0.4s;"></span>
+                <span style="font-size:12px; color:#666; margin-left:4px;">Recherche en cours...</span>
+            </div>
+            <style>
+                @keyframes pulse {
+                    from { opacity: 0.3; transform: scale(1); }
+                    to { opacity: 1; transform: scale(1.3); }
+                }
+            </style>
+        `;
+
+            contentDiv.appendChild(bubbleDiv);
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            return id;
+        }
+
+        function removeLoaderMessage(id) {
+            const loader = document.getElementById(id);
+            if (loader) loader.remove();
+        }
+
+        function renderSourcesExpander(sources, latency, routingDomain, latencies = {}) {
+            if (!sources || sources.length === 0) return null;
+
+            const role = localStorage.getItem('role') || 'user';
+            const isAdmin = (role === 'admin');
+
+            const expanderDiv = document.createElement('div');
+            expanderDiv.className = 'expander';
+
+            const headerBtn = document.createElement('button');
+            headerBtn.className = 'expander-header';
+            headerBtn.onclick = function () { toggleExpander(this); };
+
+            const titleText = isAdmin ? 'Voir les sources et métriques d\'audit' : 'Voir les documents de référence';
+            headerBtn.innerHTML = `
+            
+            <span>${titleText}</span>
+            <span class="chevron" style="margin-left:auto; transition: transform 0.2s;">▼</span>
+        `;
+
+            const bodyDiv = document.createElement('div');
+            bodyDiv.className = 'expander-body';
+
+            let sourcesHtml = '<div style="font-size:11px; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Sources officielles utilisées</div>';
+
+            let totalScore = 0;
+            sources.forEach((src, idx) => {
+                const name = src.metadata ? (src.metadata.source || 'Document') : 'Document';
+                const page = src.metadata && src.metadata.page ? `Page ${src.metadata.page}` : 'N/A';
+                const score = src.score ? Math.round(src.score * 100) : 0;
+                const rerank_score = src.rerank_score ? src.rerank_score.toFixed(2) : 'N/A';
+                totalScore += score;
+
+                const scoreBadge = isAdmin ? `<span class="source-score" title="Rerank score: ${rerank_score}">${score}%</span>` : '';
+
+                // On s'assure que le texte du chunk est bien échappé pour ne pas casser le HTML
+                const safeText = (src.text || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/\n/g, '\\n');
+
+                sourcesHtml += `
+                <div class="source-item" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; align-items:center;">
+                        
+                        <div class="source-info" style="margin-left:8px;">
+                            <div class="source-name">${name}</div>
+                            <div class="source-pages">${page}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap: 8px;">
+                        ${scoreBadge}
+                        <button class="btn-primary" style="padding: 4px 8px; font-size: 11px;" onclick="openSourceModal('${name}', '${page}', '${safeText}')">Voir le passage</button>
+                    </div>
+                </div>
+            `;
+            });
+
+            bodyDiv.innerHTML = sourcesHtml;
+
+            if (isAdmin) {
+                const avgScore = sources.length > 0 ? Math.round(totalScore / sources.length) : 0;
+                const domainInfo = routingDomain ? ` (Domaine: ${routingDomain})` : '';
+
+                let latenciesHtml = '';
+                if (latencies && Object.keys(latencies).length > 0) {
+                    latenciesHtml = `
+                    <div style="font-size:10px; color:#888; text-transform:uppercase; margin-top:10px; margin-bottom:5px;">Latences Détaillées</div>
+                    <div style="display:flex; justify-content:space-between; font-size:11px; font-family:monospace; background:#fafafa; padding:8px; border-radius:4px; border:1px solid #eee;">
+                        <span>Vector: ${latencies.retrieval || 0}ms</span>
+                        <span>Hybrid: ${latencies.hybrid || 0}ms</span>
+                        <span>Rerank: ${latencies.reranking || 0}ms</span>
+                        <span style="color:var(--owl-primary);">LLM: ${latencies.llm || 0}ms</span>
+                    </div>
+                `;
+                }
+
+                bodyDiv.innerHTML += `
+                <div class="metric-row">
+                    <div class="metric-box">
+                        <div class="label">Pertinence moyenne</div>
+                        <div class="progress-bar">
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width:${avgScore}%;"></div>
+                            </div>
+                            <span class="progress-value">${avgScore}%</span>
+                        </div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="label">Temps total</div>
+                        <div class="metric-value">${latency || 0.0}<span class="unit">s</span></div>
+                    </div>
+                </div>
+                ${latenciesHtml}
+                <div class="model-info" style="display:flex; justify-content:space-between; font-size: 12px; color: #666; margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                    <div><strong>Modèle:</strong> ${localStorage.getItem('config_llm') || 'llama3.2:1b'}${domainInfo}</div>
+                    <div><strong>Mode Retrieval:</strong> ${JSON.parse(localStorage.getItem('owlConfig') || '{}')?.rag?.mode || 'hybrid'}</div>
+                    <div><strong>Reranking:</strong> ${JSON.parse(localStorage.getItem('owlConfig') || '{}')?.rag?.reranking !== false ? 'Activé' : 'Désactivé'}</div>
+                </div>
+            `;
+            }
+
+            expanderDiv.appendChild(headerBtn);
+            expanderDiv.appendChild(bodyDiv);
+            return expanderDiv;
+        }
+
+        // Append RAG response with source expander
+        function appendBotMessage(answer, sources, latency, routingDomain) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'message-avatar bot';
+            avatarDiv.innerHTML = '<img src="/OWLMedia.png" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble bot';
+            bubbleDiv.innerHTML = formatMarkdown(answer);
+
+            contentDiv.appendChild(bubbleDiv);
+
+            const expanderEl = renderSourcesExpander(sources, latency, routingDomain);
+            if (expanderEl) {
+                contentDiv.appendChild(expanderEl);
+            }
+
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // --- CHAT HISTORY MANAGEMENT ---
+        function getHistoryKey(username) {
+            return `chatHistory_${username}`;
+        }
+
+        function saveMessageToHistory(role, text, sources = null, latency = null, routingDomain = null) {
+            const username = localStorage.getItem('username');
+            if (!username) return;
+            const key = getHistoryKey(username);
+            let history = JSON.parse(localStorage.getItem(key) || '[]');
+            history.push({
+                role: role,
+                text: text,
+                sources: sources,
+                latency: latency,
+                routingDomain: routingDomain,
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem(key, JSON.stringify(history));
+        }
+
+        function loadChatHistory(username) {
+            const messagesContainer = document.getElementById('chatMessages');
+            messagesContainer.innerHTML = `
+            <div class="message bot">
+                <div class="message-avatar bot"><img src="/OWLMedia.png" style="width:100%; height:100%; border-radius:50%; object-fit:cover;"></div>
+                <div class="message-content">
+                    <div class="message-bubble bot">
+                        <p>Bonjour <strong>${username}</strong> ! Je suis votre assistant RAG OWL Media. Comment puis-je vous aider aujourd'hui ?</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+            const key = getHistoryKey(username);
+            let history = JSON.parse(localStorage.getItem(key) || '[]');
+
+            history.forEach(msg => {
+                if (msg.role === 'user') {
+                    appendMessage('user', msg.text);
+                } else if (msg.role === 'bot') {
+                    appendBotMessage(msg.text, msg.sources, msg.latency, msg.routingDomain);
+                }
+            });
+
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Chat execution
+        async function sendMessage() {
+            const inputEl = document.getElementById('chatInput');
+            const query = inputEl.value.trim();
+            if (!query) return;
+
+            inputEl.value = '';
+            inputEl.rows = 1;
+
+            appendMessage('user', query);
+            saveMessageToHistory('user', query);
+
+            const loaderId = appendLoaderMessage();
+            const startTime = Date.now();
+
+            let reqBody = { query: query, top_k: 5 };
+            const saved = localStorage.getItem('owlConfig');
+            if (saved) {
+                const config = JSON.parse(saved);
+                if (config.rag) {
+                    reqBody = {
+                        query: query,
+                        top_k: config.rag.topK || 5,
+                        retrieval_mode: config.rag.mode || 'hybrid',
+                        similarity_threshold: config.rag.similarity || 0.70,
+                        vector_weight: config.rag.vectorWeight || 0.70,
+                        keyword_weight: config.rag.keywordWeight || 0.30,
+                        reranking: config.rag.reranking !== false,
+                        top_n_candidates: config.rag.topN || 20
+                    };
+                }
+                if (config.systemPrompt) {
+                    reqBody.system_prompt = config.systemPrompt;
+                }
+            }
+
+            try {
+                const res = await authFetch('/query/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(reqBody)
+                });
+
+                if (!res.ok) {
+                    throw new Error(`Statut ${res.status}`);
+                }
+
+                removeLoaderMessage(loaderId);
+
+                // Initialisation de la bulle de message progressive
+                const messagesContainer = document.getElementById('chatMessages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message bot';
+
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = 'message-avatar bot';
+                avatarDiv.innerHTML = '<img src="/OWLMedia.png" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">';
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+
+                const bubbleDiv = document.createElement('div');
+                bubbleDiv.className = 'message-bubble bot';
+
+                contentDiv.appendChild(bubbleDiv);
+                messageDiv.appendChild(avatarDiv);
+                messageDiv.appendChild(contentDiv);
+                messagesContainer.appendChild(messageDiv);
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let answerText = "";
+                let sources = [];
+                let routingDomain = "";
+                let latenciesObj = {};
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('token:')) {
+                            const token = line.slice(6);
+                            answerText += token;
+                            bubbleDiv.innerHTML = formatMarkdown(answerText);
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        } else if (line.startsWith('metadata:')) {
+                            const meta = JSON.parse(line.slice(9));
+                            sources = meta.sources || [];
+                            routingDomain = meta.metadata?.routing_domain || "";
+                            if (meta.metadata?.latencies) {
+                                latenciesObj = meta.metadata.latencies;
+                            }
+                        } else if (line.startsWith('latency_llm:')) {
+                            latenciesObj.llm = parseFloat(line.slice(12));
+                        } else if (line.startsWith('error:')) {
+                            const errorMsg = line.slice(6);
+                            bubbleDiv.textContent = `Erreur : ${errorMsg}`;
+                        }
+                    }
+                }
+
+                const latency = ((Date.now() - startTime) / 1000).toFixed(3);
+
+                const expanderEl = renderSourcesExpander(sources, latency, routingDomain, latenciesObj);
+                if (expanderEl) {
+                    contentDiv.appendChild(expanderEl);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+
+                saveMessageToHistory('bot', answerText, sources, latency, routingDomain);
+
+            } catch (err) {
+                removeLoaderMessage(loaderId);
+                appendMessage('bot', `Désolé, une erreur est survenue lors de la communication avec l'API : ${err.message}`);
+            }
+        }
+
+        // INGESTION / FILE MANAGEMENT
+        let selectedFiles = [];
+
+        function handleFiles(input) {
+            selectedFiles = Array.from(input.files);
+            updateFileQueue();
+        }
+
+        function updateFileQueue() {
+            const queueContainer = document.querySelector('.file-queue');
+            if (!queueContainer) return;
+
+            if (selectedFiles.length === 0) {
+                queueContainer.innerHTML = '<div class="queue-label">Aucun fichier sélectionné</div>';
+                return;
+            }
+
+            let html = `<div class="queue-label">Fichiers en attente (${selectedFiles.length})</div>`;
+            selectedFiles.forEach((file, index) => {
+                const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                html += `
+                <div class="queue-item">
+                    <span style="font-size:18px;"></span>
+                    <div class="queue-info">
+                        <div class="queue-name">${file.name}</div>
+                        <div class="queue-size">${sizeMB} MB</div>
+                    </div>
+                    <button class="queue-remove" onclick="removeFromFileQueue(${index})" style="background:none; border:none; color:var(--owl-red); cursor:pointer;">×</button>
+                </div>
+            `;
+            });
+            queueContainer.innerHTML = html;
+        }
+
+        function removeFromFileQueue(index) {
+            selectedFiles.splice(index, 1);
+            updateFileQueue();
+        }
+
+        function selectChunkType(element) {
+            document.querySelectorAll('.chunk-type').forEach(el => {
+                el.classList.remove('selected');
+            });
+            element.classList.add('selected');
+        }
+
+        function updateSliderValue(slider, valId) {
+            document.getElementById(valId).innerText = slider.value;
+        }
+
+        async function startIngestion() {
+            if (selectedFiles.length === 0) {
+                alert("Veuillez sélectionner au moins un fichier à indexer.");
+                return;
+            }
+
+            const chunkSize = document.getElementById('chunkSize').value;
+            const chunkOverlap = document.getElementById('overlap').value;
+            const isSemantic = document.querySelector('.chunk-type.selected .type-name').innerText.trim().toLowerCase() === 'semantic';
+
+            const btn = document.querySelector('.btn-primary');
+            const origText = btn.innerText;
+            btn.innerText = "Indexation en cours...";
+            btn.disabled = true;
+
+            for (const file of selectedFiles) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    addSystemLog(`Démarrage de l'indexation de ${file.name}...`, 'INFO');
+                    const res = await authFetch(`/ingest?chunk_size=${chunkSize}&chunk_overlap=${chunkOverlap}&use_semantic=${isSemantic}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!res.ok) {
+                        throw new Error(`Statut ${res.status}`);
+                    }
+                    const data = await res.json();
+                    addSystemLog(`Fichier ${file.name} téléversé avec succès. Job ID: ${data.job_id}`, 'SUCCESS');
+
+                    // Démarrer le polling
+                    document.getElementById('pipeline-container').style.display = 'block';
+                    await pollIngestionStatus(data.job_id);
+
+                } catch (err) {
+                    addSystemLog(`Erreur d'indexation pour ${file.name} : ${err.message}`, 'ERROR');
+                    alert(`Erreur d'indexation pour ${file.name} : ${err.message}`);
+                }
+            }
+
+            selectedFiles = [];
+            updateFileQueue();
+            btn.innerText = origText;
+            btn.disabled = false;
+
+            // Refresh tables
+            setTimeout(refreshData, 1000);
+        }
+
+        async function pollIngestionStatus(job_id) {
+            return new Promise((resolve) => {
+                const interval = setInterval(async () => {
+                    try {
+                        const res = await authFetch(`/api/ingestion/status/${job_id}`);
+                        if (res.ok) {
+                            const status = await res.json();
+                            updatePipelineUI(status);
+
+                            if (status.step === 'completed' || status.step === 'error') {
+                                clearInterval(interval);
+                                resolve(status);
+                            }
+                        }
+                    } catch (e) {
+                        clearInterval(interval);
+                        resolve(null);
+                    }
+                }, 1000);
+            });
+        }
+
+        function updatePipelineUI(status) {
+            // Réinitialiser les barres
+            const steps = ['extraction', 'chunking', 'embedding', 'qdrant'];
+            let currentIdx = steps.indexOf(status.step);
+            if (status.step === 'completed') currentIdx = steps.length;
+
+            steps.forEach((step, idx) => {
+                const el = document.getElementById(`step-${step}`);
+                const fill = el.querySelector('.progress-fill');
+                const statText = el.querySelector('.step-status');
+                const details = el.querySelector('.step-details');
+
+                if (idx < currentIdx) {
+                    fill.style.width = '100%';
+                    statText.innerText = 'Terminé';
+                } else if (idx === currentIdx) {
+                    fill.style.width = `${status.progress}%`;
+                    statText.innerText = `${status.progress}%`;
+                    details.innerText = status.details || '';
+                } else {
+                    fill.style.width = '0%';
+                    statText.innerText = 'En attente...';
+                    details.innerText = '-';
+                }
+            });
+
+            if (status.step === 'error') {
+                document.querySelector('#step-extraction .step-status').innerText = 'Erreur';
+                document.querySelector('#step-extraction .step-details').innerText = status.details;
+            }
+        }
+
+        // Refresh Data and Stats
+        async function refreshData() {
+            if (!localStorage.getItem('token')) return;
+            try {
+                // Documents indexés
+                const docsRes = await authFetch('/api/documents');
+                if (docsRes.ok) {
+                    const docs = await docsRes.json();
+                    updateDocumentsTable(docs);
+                    updateSidebarDocs(docs);
+                }
+
+                // Stats de l'application
+                const statsRes = await authFetch('/api/stats');
+                if (statsRes.ok) {
+                    const stats = await statsRes.json();
+                    updateStatsUI(stats);
+                }
+
+                // Healthcheck
+                updateSystemHealth();
+            } catch (err) {
+                console.error("Erreur lors de la mise à jour des données :", err);
+            }
+        }
+
+        function updateDocumentsTable(docs) {
+            const tbody = document.querySelector('.data-table tbody');
+            if (!tbody) return;
+
+            if (docs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#aaa; padding:24px;">Aucun document disponible dans la base vectorielle.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            docs.forEach(doc => {
+                const sizeStr = doc.size_chars > 1000
+                    ? (doc.size_chars / 1000).toFixed(1) + " KB"
+                    : doc.size_chars + " chars";
+
+                html += `
+                <tr>
+                    <td style="font-weight:600;">${doc.name}</td>
+                    <td style="color:#888;">${doc.type}</td>
+                    <td style="text-align:center; font-weight:700;">${doc.chunks}</td>
+                    <td style="text-align:center; color:#888;">${sizeStr}</td>
+                    <td style="text-align:center; color:#888;">${doc.indexed_at_str}</td>
+                    <td style="text-align:center;"><span class="badge badge-success">Actif</span></td>
+                    <td style="text-align:center;">
+                        <button class="btn-filter" style="margin-right:8px;" onclick="viewChunks('${doc.name}')">Voir Chunks</button>
+                        <button class="btn-filter" style="margin-right:8px; background:var(--owl-dark);" onclick="openReindexModal('${doc.name}')">Réindexer</button>
+                        <button class="btn-danger" onclick="deleteDocument('${doc.name}')">Supprimer</button>
+                    </td>
+                </tr>
+            `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        async function viewChunks(source_name) {
+            document.getElementById('chunkModalTitle').innerText = source_name;
+            const body = document.getElementById('chunkModalBody');
+            body.innerHTML = '<i>Chargement des chunks...</i>';
+            document.getElementById('chunkModal').style.display = 'flex';
+
+            try {
+                const res = await authFetch(`/api/documents/${source_name}/chunks`);
+                if (res.ok) {
+                    const chunks = await res.json();
+                    if (chunks.length === 0) {
+                        body.innerHTML = 'Aucun chunk trouvé.';
+                        return;
+                    }
+
+                    let html = '';
+                    chunks.forEach((chunk, i) => {
+                        const textPreview = chunk.text;
+                        const meta = chunk.metadata || {};
+                        // Estimate tokens roughly (1 token ~ 4 chars)
+                        const chars = meta.char_count || chunk.text.length;
+                        const tokens = Math.round(chars / 4);
+
+                        html += `
+                        <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:16px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #f0f0f0; padding-bottom:8px; margin-bottom:12px;">
+                                <div>
+                                    <strong style="color:var(--owl-red);">Chunk #${i}</strong>
+                                    <span style="font-size:12px; color:#888; margin-left:8px;">(Page ${meta.page || 'N/A'})</span>
+                                </div>
+                                <span style="font-size:12px; color:#888;">${chars} caractères (~${tokens} tokens)</span>
+                            </div>
+                            <div style="font-size:14px; line-height:1.5; color:#333; margin-bottom:12px; background:#f5f5f5; padding:12px; border-radius:6px; font-family:monospace; max-height:200px; overflow-y:auto;">
+                                ${textPreview}
+                            </div>
+                            <div style="font-size:11px; color:#888; background:#fafafa; padding:8px; border-radius:4px; border:1px solid #eee;">
+                                <strong>Metadata:</strong> ${JSON.stringify(meta)}
+                            </div>
+                        </div>
+                    `;
+                    });
+                    body.innerHTML = html;
+                } else {
+                    body.innerHTML = 'Erreur lors du chargement des chunks.';
+                }
+            } catch (e) {
+                body.innerHTML = 'Erreur réseau.';
+            }
+        }
+
+        function selectReindexChunkType(element) {
+            document.querySelectorAll('#reindexModal .chunk-type').forEach(el => {
+                el.classList.remove('selected');
+            });
+            element.classList.add('selected');
+        }
+
+        function openReindexModal(filename) {
+            document.getElementById('reindexModalTitle').innerText = filename;
+            document.getElementById('reindexFilename').value = filename;
+            document.getElementById('reindexModal').style.display = 'flex';
+        }
+
+        async function startReindex() {
+            const filename = document.getElementById('reindexFilename').value;
+            const chunkSize = document.getElementById('reindexChunkSize').value;
+            const chunkOverlap = document.getElementById('reindexOverlap').value;
+            const isSemantic = document.querySelector('#reindexModal .chunk-type.selected .type-name').innerText.trim().toLowerCase() === 'semantic';
+
+            document.getElementById('reindexModal').style.display = 'none';
+            document.getElementById('pipeline-container').style.display = 'block';
+
+            try {
+                addSystemLog(`Démarrage de la réindexation de ${filename}...`, 'INFO');
+                const res = await authFetch(`/api/reindex?source_name=${filename}&chunk_size=${chunkSize}&chunk_overlap=${chunkOverlap}&use_semantic=${isSemantic}`, {
+                    method: 'POST'
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || `Statut ${res.status}`);
+                }
+
+                const data = await res.json();
+                await pollIngestionStatus(data.job_id);
+                setTimeout(refreshData, 1000);
+                addSystemLog(`Réindexation de ${filename} réussie.`, 'SUCCESS');
+            } catch (err) {
+                addSystemLog(`Erreur de réindexation pour ${filename}: ${err.message}`, 'ERROR');
+                alert(`Erreur: ${err.message}`);
+            }
+        }
+
+        function updateSidebarDocs(docs) {
+            const panel = document.querySelector('.panel-card:nth-child(2)');
+            if (!panel) return;
+
+            let html = '<h3>Documents indexés</h3>';
+            if (docs.length === 0) {
+                html += '<div style="font-size:12px; color:#aaa; text-align:center; padding:10px;">Aucun document</div>';
+            } else {
+                docs.slice(0, 4).forEach(doc => {
+                    html += `
+                    <div class="doc-item">
+                        <span style="font-size:18px;"></span>
+                        <div class="doc-info">
+                            <div class="doc-name">${doc.name}</div>
+                            <div class="doc-meta">${doc.chunks} chunks • ${doc.type}</div>
+                        </div>
+                    </div>
+                `;
+                });
+            }
+            panel.innerHTML = html;
+        }
+
+        async function deleteDocument(name) {
+            if (!confirm(`Supprimer définitivement "${name}" de la base vectorielle ?`)) return;
+
+            try {
+                addSystemLog(`Suppression de ${name}...`, 'INFO');
+                const res = await authFetch(`/api/documents/${encodeURIComponent(name)}`, {
+                    method: 'DELETE'
+                });
+                if (!res.ok) throw new Error(`Statut ${res.status}`);
+
+                addSystemLog(`Document ${name} supprimé avec succès.`, 'SUCCESS');
+                refreshData();
+            } catch (err) {
+                addSystemLog(`Erreur lors de la suppression de ${name} : ${err.message}`, 'ERROR');
+                alert(`Erreur de suppression : ${err.message}`);
+            }
+        }
+
+        function updateStatsUI(stats) {
+            // Update new KPI grid if it exists
+            const kpiDocs = document.getElementById('kpi-docs');
+            if (kpiDocs) {
+                kpiDocs.innerText = stats.documents_count || 0;
+                document.getElementById('kpi-chunks').innerText = (stats.chunks_count || 0).toLocaleString();
+                document.getElementById('kpi-embeddings').innerText = (stats.chunks_count || 0).toLocaleString(); // same as chunks usually
+                document.getElementById('kpi-qdrant').innerText = stats.qdrant_status === 'online' ? '● Connected' : '● Offline';
+                document.getElementById('kpi-qdrant').style.color = stats.qdrant_status === 'online' ? '#10b981' : '#d93a2b';
+            }
+
+            // Update stats badge labels
+            const sub = document.querySelector('.sub-status');
+            if (sub) {
+                sub.innerText = `API: Connectée • Qdrant: ${stats.qdrant_status === 'online' ? 'Actif' : 'Hors-ligne'}`;
+            }
+        }
+
+        function updateSystemHealth() {
+            fetch('/health')
+                .then(res => res.json())
+                .then(data => {
+                    const badge = document.querySelector('.api-badge');
+                    if (badge) {
+                        if (data.status === 'healthy') {
+                            badge.style.background = '#f0fdf4';
+                            badge.style.borderColor = '#bbf7d0';
+                            badge.querySelector('span:nth-child(2)').innerText = "Serveur API : En ligne";
+                            badge.querySelector('span:nth-child(2)').style.color = "var(--success-text)";
+                        } else {
+                            badge.style.background = '#fef3c7';
+                            badge.style.borderColor = '#fde68a';
+                            badge.querySelector('span:nth-child(2)').innerText = "Statut dégradé";
+                            badge.querySelector('span:nth-child(2)').style.color = "var(--warning-text)";
+                        }
+                    }
+                })
+                .catch(err => {
+                    const badge = document.querySelector('.api-badge');
+                    if (badge) {
+                        badge.style.background = '#fee2e2';
+                        badge.style.borderColor = '#fca5a5';
+                        badge.querySelector('span:nth-child(2)').innerText = "Serveur API : Déconnecté";
+                        badge.querySelector('span:nth-child(2)').style.color = "var(--danger-text)";
+                    }
+                });
+        }
+
+        function addSystemLog(message, level = 'INFO') {
+            const container = document.getElementById('logsContainer');
+            if (!container) return;
+
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+
+            let color = '#166534';
+            let bg = '#dcfce7';
+            if (level === 'ERROR') {
+                color = '#dc2626';
+                bg = '#fee2e2';
+            } else if (level === 'INFO') {
+                color = '#1e3a8a';
+                bg = '#dbeafe';
+            }
+
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+
+            entry.innerHTML = `
+            <span class="log-time">[${timeStr}]</span>
+            <span class="badge" style="background:${bg}; color:${color}; font-size:10px; font-weight:700;">${level}</span>
+            <span class="log-msg" style="margin-left: 8px;">${message}</span>
+        `;
+
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // CONFIGURATION MANAGEMENT
+        function saveConfiguration() {
+            const config = {
+                qdrantUrl: document.getElementById('configQdrant').value,
+                ollamaUrl: document.getElementById('configOllama').value,
+                embeddingsModel: document.getElementById('configEmbeddings').value,
+                llmModel: document.getElementById('configLLM').value,
+                systemPrompt: document.getElementById('configSystemPrompt').value,
+                rag: {
+                    mode: document.getElementById('configRetrievalMode').value,
+                    topK: parseInt(document.getElementById('configTopK').value),
+                    topN: parseInt(document.getElementById('configTopN').value),
+                    similarity: parseInt(document.getElementById('configSimilarity').value) / 100,
+                    reranking: document.getElementById('configReranking').checked,
+                    vectorWeight: parseFloat(document.getElementById('configWeightVector').value),
+                    keywordWeight: parseFloat(document.getElementById('configWeightKeyword').value)
+                }
+            };
+            localStorage.setItem('owlConfig', JSON.stringify(config));
+
+            addSystemLog("Configuration modifiée et enregistrée.", "SUCCESS");
+            alert("Configuration sauvegardée avec succès !");
+        }
+
+        function loadConfiguration() {
+            const saved = localStorage.getItem('owlConfig');
+            if (saved) {
+                const config = JSON.parse(saved);
+                document.getElementById('configQdrant').value = config.qdrantUrl || "http://localhost:6333";
+                document.getElementById('configOllama').value = config.ollamaUrl || "http://localhost:11434";
+                document.getElementById('configEmbeddings').value = config.embeddingsModel || "nomic-embed-text";
+                document.getElementById('configLLM').value = config.llmModel || "llama3.2:1b";
+                if (config.systemPrompt) document.getElementById('configSystemPrompt').value = config.systemPrompt;
+
+                if (config.rag) {
+                    document.getElementById('configRetrievalMode').value = config.rag.mode || "hybrid";
+                    document.getElementById('configTopK').value = config.rag.topK || 5;
+                    document.getElementById('configTopN').value = config.rag.topN || 20;
+                    document.getElementById('configSimilarity').value = (config.rag.similarity || 0.70) * 100;
+                    document.getElementById('configReranking').checked = config.rag.reranking !== false;
+                    document.getElementById('configWeightVector').value = config.rag.vectorWeight || 0.70;
+                    document.getElementById('configWeightKeyword').value = config.rag.keywordWeight || 0.30;
+                }
+            }
+        }
+
+        // DOM Ready Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            // Drag and drop zone binding
+            const zone = document.querySelector('.upload-zone');
+            if (zone) {
+                zone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    zone.style.background = '#ffeeee';
+                });
+                zone.addEventListener('dragleave', () => {
+                    zone.style.background = '#fff5f5';
+                });
+                zone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    zone.style.background = '#fff5f5';
+                    if (e.dataTransfer.files.length > 0) {
+                        selectedFiles = Array.from(e.dataTransfer.files);
+                        updateFileQueue();
+                    }
+                });
+            }
+
+            // Enter key in chat input
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) {
+                chatInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+                });
+            }
+
+            // Quick action handlers
+            document.querySelectorAll('.quick-action').forEach(btn => {
+                btn.onclick = () => {
+                    const text = btn.innerText.substring(2);
+                    const inputEl = document.getElementById('chatInput');
+                    if (text.includes("Résumer") || text.includes("Resumer")) {
+                        inputEl.value = "Fais-moi un résumé synthétique du dernier document indexé s'il te plaît.";
+                    } else if (text.includes("Rechercher")) {
+                        inputEl.focus();
+                        return;
+                    } else if (text.includes("rapport")) {
+                        inputEl.value = "Génère un rapport de synthèse global sur l'ensemble de nos documents indexés.";
+                    }
+                    sendMessage();
+                };
+            });
+
+            // Vérification de l'authentification au démarrage
+            const token = localStorage.getItem('token');
+            const role = localStorage.getItem('role');
+            const username = localStorage.getItem('username');
+
+            if (token && role && username) {
+                document.getElementById('loginScreen').style.display = 'none';
+                applyRBAC(role);
+                updateUserProfile(username, role);
+                loadConfiguration();
+                loadChatHistory(username);
+                refreshData();
+            } else {
+                logout();
+            }
+
+            // Intervalle régulier de rafraîchissement des données (si connecté)
+            setInterval(() => {
+                if (localStorage.getItem('token')) {
+                    refreshData();
+                }
+            }, 10000);
+
+            // Initialiser le monitoring
+            if (role === 'admin') {
+                fetchHealth();
+                fetchMetrics();
+                fetchLogs();
+            }
+        });
+
+        // --- PHASE 3 : MONITORING MLOps JS ---
+        let autoRefreshInterval = null;
+        let latencyChartInstance = null;
+        let retrievalChartInstance = null;
+
+        function setupAutoRefresh() {
+            const val = parseInt(document.getElementById('metricsRefresh').value);
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            if (val > 0) {
+                autoRefreshInterval = setInterval(() => {
+                    fetchHealth();
+                    fetchMetrics();
+                    fetchLogs();
+                }, val * 1000);
+            }
+        }
+
+        async function fetchHealth() {
+            try {
+                const res = await fetch(`/api/health`);
+                const data = await res.json();
+                const banner = document.getElementById('systemHealthBanner');
+                if (!banner) return;
+
+                let html = `<div><h3 style="margin:0 0 4px; font-size:14px; color:var(--owl-text-muted);">SYSTEM HEALTH</h3>
+                        <div style="font-weight:bold; font-size:16px; color:${data.status === 'healthy' ? 'var(--success)' : 'var(--owl-red)'};">
+                        ${data.status === 'healthy' ? 'ALL SYSTEMS GO' : 'DEGRADED'}</div></div>`;
+
+                const renderService = (name, s) => {
+                    const isOk = s.status === 'healthy' || s.status === 'loaded';
+                    const color = isOk ? 'var(--success)' : 'var(--owl-red)';
+                    const icon = isOk ? '●' : '▲';
+                    return `<div style="flex:1; border-left:1px solid var(--owl-border); padding-left:16px;">
+                            <div style="font-size:12px; font-weight:600; text-transform:uppercase; color:var(--owl-text-muted);">${name}</div>
+                            <div style="font-size:14px; font-weight:bold; color:${color};">${icon} ${s.status}</div>
+                        </div>`;
+                };
+
+                html += renderService("API", data.services.api || { status: "unknown" });
+                html += renderService("Qdrant", data.services.qdrant || { status: "unknown" });
+                html += renderService("LLM", data.services.llm || { status: "unknown" });
+                html += renderService("Embedding", data.services.embedding || { status: "unknown" });
+                html += renderService("Reranker", data.services.reranker || { status: "unknown" });
+
+                banner.innerHTML = html;
+            } catch (e) {
+                console.error("Health check error", e);
+            }
+        }
+
+        async function fetchMetrics() {
+            const period = document.getElementById('metricsPeriod').value;
+            try {
+                const res = await fetch(`/api/metrics?period=${period}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                if (!res.ok) {
+                    console.error("API Error in metrics:", res.status, await res.text());
+                    return;
+                }
+                const data = await res.json();
+
+                // 1. KPI Cards
+                const kpiContainer = document.getElementById('kpiCards');
+                const q = data.queries || { total: 0, successful: 0, failed: 0, no_context: 0, success_rate: 0, error_rate: 0, no_context_rate: 0 };
+                const l = data.latency || { avg: 0, p50: 0, p95: 0, p99: 0 };
+                const sr = q.success_rate !== undefined ? q.success_rate : (q.total > 0 ? ((q.successful / q.total) * 100).toFixed(1) : 0);
+                const nc = q.no_context_rate !== undefined ? q.no_context_rate : (q.total > 0 ? ((q.no_context / q.total) * 100).toFixed(1) : 0);
+
+                kpiContainer.innerHTML = `
+                <div class="metric-card"><div class="metric-label">Total Queries</div><div class="metric-number">${q.total}</div></div>
+                <div class="metric-card"><div class="metric-label">Successful Queries</div><div class="metric-number">${q.successful}</div></div>
+                <div class="metric-card"><div class="metric-label">Success Rate</div><div class="metric-number">${sr}<span style="font-size:16px; color:#888;">%</span></div></div>
+                <div class="metric-card"><div class="metric-label">Avg Latency</div><div class="metric-number">${(l.avg / 1000).toFixed(2)}<span style="font-size:16px; color:#888;">s</span></div></div>
+                <div class="metric-card"><div class="metric-label">P95 Latency</div><div class="metric-number">${(l.p95 / 1000).toFixed(2)}<span style="font-size:16px; color:#888;">s</span></div></div>
+                <div class="metric-card"><div class="metric-label">No Context Rate</div><div class="metric-number">${nc}<span style="font-size:16px; color:#888;">%</span></div></div>
+            `;
+
+                // 2. Latency Chart (Breakdown)
+                const lb = data.latency_breakdown || { retrieval: 0, hybrid: 0, reranking: 0, llm: 0 };
+                const ctxLatency = document.getElementById('latencyChart');
+                if (ctxLatency) {
+                    if (latencyChartInstance) latencyChartInstance.destroy();
+                    latencyChartInstance = new Chart(ctxLatency, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Retrieval', 'Hybrid', 'Reranking', 'LLM'],
+                            datasets: [{
+                                label: 'Latence Moyenne (ms)',
+                                data: [lb.retrieval, lb.hybrid, lb.reranking, lb.llm],
+                                backgroundColor: ['#3b82f6', '#8b5cf6', '#ec4899', '#d93a2b'],
+                                borderRadius: 4,
+                                minBarLength: 15
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (context) {
+                                            return context.dataset.label + ': ' + context.raw + ' ms';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // 3. Retrieval Chart
+                const ret = data.retrieval || { vector: 0, keyword: 0, hybrid: 0, avg_candidates: 0, avg_final: 0 };
+                const ctxRet = document.getElementById('retrievalChart');
+                if (ctxRet) {
+                    if (retrievalChartInstance) retrievalChartInstance.destroy();
+                    retrievalChartInstance = new Chart(ctxRet, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Vector', 'Keyword', 'Hybrid'],
+                            datasets: [{
+                                data: [ret.vector, ret.keyword, ret.hybrid],
+                                backgroundColor: ['#d93a2b', '#f59e0b', '#3b82f6']
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+                }
+
+                // 4. Reranking Stats
+                const rerank = data.reranking || { enabled_rate: 0, avg_latency: 0 };
+                document.getElementById('rerankingStats').innerHTML = `
+                <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+                    <div style="font-size:12px; color:#64748b;">Reranking Enabled Rate</div>
+                    <div style="font-size:18px; font-weight:bold; color:#0f172a;">${rerank.enabled_rate}%</div>
+                </div>
+                <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+                    <div style="font-size:12px; color:#64748b;">Avg Reranking Latency</div>
+                    <div style="font-size:18px; font-weight:bold; color:#0f172a;">${rerank.avg_latency.toFixed(0)} ms</div>
+                </div>
+                <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+                    <div style="font-size:12px; color:#64748b;">Avg Initial Candidates</div>
+                    <div style="font-size:18px; font-weight:bold; color:#0f172a;">${ret.avg_candidates.toFixed(1)}</div>
+                </div>
+                <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+                    <div style="font-size:12px; color:#64748b;">Avg Final Sources</div>
+                    <div style="font-size:18px; font-weight:bold; color:#0f172a;">${ret.avg_final.toFixed(1)}</div>
+                </div>
+            `;
+
+            } catch (e) {
+                console.error("Metrics fetch error", e);
+            }
+        }
+
+        async function fetchLogs() {
+            const level = document.getElementById('logLevelFilter').value;
+            try {
+                const res = await fetch(`/api/logs?level=${level}&limit=50`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                if (!res.ok) {
+                    console.error("API Error in logs:", res.status, await res.text());
+                    return;
+                }
+                const logs = await res.json();
+                const container = document.getElementById('logsContainer');
+
+                container.innerHTML = logs.map(l => {
+                    const date = new Date(l.timestamp * 1000).toLocaleTimeString();
+                    let badgeColor = '#e2e8f0'; let textColor = '#475569';
+                    if (l.level === 'SUCCESS') { badgeColor = '#dcfce7'; textColor = '#166534'; }
+                    if (l.level === 'ERROR') { badgeColor = '#fee2e2'; textColor = '#991b1b'; }
+                    if (l.level === 'WARNING') { badgeColor = '#fef9c3'; textColor = '#854d0e'; }
+                    if (l.level === 'INFO') { badgeColor = '#dbeafe'; textColor = '#1e3a8a'; }
+
+                    return `<div class="log-entry" style="display:flex; gap:8px; padding:4px 0; border-bottom:1px solid #f1f5f9;">
+                    <span style="color:#94a3b8; min-width:70px;">[${date}]</span>
+                    <span style="background:${badgeColor}; color:${textColor}; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px; min-width:60px; text-align:center;">${l.level}</span>
+                    <span style="color:#64748b; min-width:80px;">[${l.service}]</span>
+                    <span style="color:#334155;">${l.query_id ? `<b>${l.query_id}</b> ` : ''}${l.message} ${l.duration ? `(${l.duration}ms)` : ''}</span>
+                </div>`;
+                }).join('');
+            } catch (e) {
+                console.error("Logs fetch error", e);
+            }
+        }
+
+        async function searchTrace() {
+            const qid = document.getElementById('traceSearchId').value.trim();
+            const container = document.getElementById('traceResult');
+            if (!qid) {
+                container.innerHTML = "Veuillez entrer un query_id.";
+                return;
+            }
+            container.innerHTML = "Recherche en cours...";
+            try {
+                const res = await fetch(`/api/trace/${qid}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                if (res.status === 404) {
+                    container.innerHTML = "Trace introuvable.";
+                    return;
+                }
+                if (!res.ok) {
+                    const errText = await res.text();
+                    container.innerHTML = `Erreur API: ${res.status} - ${errText}`;
+                    return;
+                }
+                const trace = await res.json();
+                let html = `<div style="margin-bottom:16px;">
+                <strong>Query ID:</strong> ${trace.query_id} <br>
+                <strong>Timestamp:</strong> ${new Date(trace.timestamp * 1000).toLocaleString()} <br>
+                <strong>Status:</strong> ${trace.status} ${trace.error_type ? `(${trace.error_type})` : ''} <br>
+                <strong>Mode:</strong> ${trace.retrieval_mode} | <strong>Reranking:</strong> ${trace.reranking_enabled ? 'ON' : 'OFF'}
+            </div>`;
+
+                html += `<table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+                <tr style="background:#f1f5f9; text-align:left;">
+                    <th style="padding:6px; border:1px solid #cbd5e1;">Step</th>
+                    <th style="padding:6px; border:1px solid #cbd5e1;">Latency</th>
+                    <th style="padding:6px; border:1px solid #cbd5e1;">Details</th>
+                </tr>
+                <tr><td style="padding:6px; border:1px solid #cbd5e1;">Retrieval</td><td style="padding:6px; border:1px solid #cbd5e1;">${trace.retrieval_latency} ms</td><td style="padding:6px; border:1px solid #cbd5e1;">${trace.candidates_count} candidates</td></tr>
+                <tr><td style="padding:6px; border:1px solid #cbd5e1;">Hybrid</td><td style="padding:6px; border:1px solid #cbd5e1;">${trace.hybrid_latency} ms</td><td style="padding:6px; border:1px solid #cbd5e1;">Fusion BM25/Dense</td></tr>
+                <tr><td style="padding:6px; border:1px solid #cbd5e1;">Reranking</td><td style="padding:6px; border:1px solid #cbd5e1;">${trace.reranking_latency} ms</td><td style="padding:6px; border:1px solid #cbd5e1;">Cross-Encoder</td></tr>
+                <tr><td style="padding:6px; border:1px solid #cbd5e1;">LLM</td><td style="padding:6px; border:1px solid #cbd5e1;">${trace.llm_latency} ms</td><td style="padding:6px; border:1px solid #cbd5e1;">Generation</td></tr>
+                <tr style="font-weight:bold; background:#f8fafc;"><td style="padding:6px; border:1px solid #cbd5e1;">Total</td><td style="padding:6px; border:1px solid #cbd5e1;">${trace.total_latency} ms</td><td style="padding:6px; border:1px solid #cbd5e1;">${trace.final_sources_count} sources final</td></tr>
+            </table>`;
+
+                if (trace.rag_trace) {
+                    html += `<strong>Internal RAG Trace (Sanitized):</strong><br><pre style="background:#e2e8f0; padding:12px; border-radius:6px; max-height:200px; overflow-y:auto; font-size:11px;">${JSON.stringify(trace.rag_trace, null, 2)}</pre>`;
+                }
+
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = "Erreur lors de la récupération de la trace.";
+            }
+        }
+    </script>
+
+    <!-- Modale Voir le Passage -->
+    <div id="sourceModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><span id="sourceModalTitle">Document</span></h3>
+                <button class="modal-close" onclick="closeSourceModal()">×</button>
+            </div>
+            <div class="modal-body"
+                style="background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-top: 15px; max-height: 400px; overflow-y: auto;">
+                <p id="sourceModalText"
+                    style="white-space: pre-wrap; font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.6; color: #334155;">
+                </p>
+            </div>
+        </div>
+    </div>
+    <script>
+        function openSourceModal(docName, page, text) {
+            document.getElementById('sourceModalTitle').textContent = `${docName} - ${page}`;
+            document.getElementById('sourceModalText').textContent = text.replace(/\\n/g, '\n');
+            document.getElementById('sourceModal').classList.add('active');
+        }
+        function closeSourceModal() {
+            document.getElementById('sourceModal').classList.remove('active');
+        }
+
+        // ==================== PHASE 4: EVALUATION & BENCHMARKING LOGIC ====================
+        let currentEvalJobId = null;
+        let evalPollInterval = null;
+
+        async function startSingleEval() {
+            const mode = document.getElementById('evalMode').value;
+            const rerank = document.getElementById('evalRerank').value === 'true';
+            const topK = parseInt(document.getElementById('evalTopK').value) || 3;
+            const thresh = parseFloat(document.getElementById('evalThreshold').value) || 0.30;
+
+            const btnSingle = document.getElementById('btnStartEval');
+            btnSingle.disabled = true;
+
+            showEvalProgress("Démarrage de l'évaluation simple...");
+
+            try {
+                const res = await authFetch('/api/eval/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        retrieval_mode: mode,
+                        reranking: rerank,
+                        top_k: topK,
+                        similarity_threshold: thresh
+                    })
+                });
+                const data = await res.json();
+                currentEvalJobId = data.job_id;
+                startEvalPolling(currentEvalJobId);
+            } catch (e) {
+                alert("Erreur lors du démarrage : " + e.message);
+                btnSingle.disabled = false;
+                hideEvalProgress();
+            }
+        }
+
+        function showEvalProgress(title) {
+            document.getElementById('evalProgressCard').style.display = 'block';
+            document.getElementById('evalProgressTitle').innerText = title;
+            document.getElementById('evalProgressPct').innerText = '0%';
+            document.getElementById('evalProgressBar').style.width = '0%';
+            document.getElementById('evalProgressDetails').innerText = 'Initialisation...';
+        }
+
+        function hideEvalProgress() {
+            document.getElementById('evalProgressCard').style.display = 'none';
+            document.getElementById('btnStartEval').disabled = false;
+        }
+
+        function startEvalPolling(jobId) {
+            if (evalPollInterval) clearInterval(evalPollInterval);
+            evalPollInterval = setInterval(async () => {
+                try {
+                    const res = await authFetch(`/api/eval/status/${jobId}`);
+                    if (!res.ok) return;
+                    const statusData = await res.json();
+
+                    const pct = statusData.progress || 0;
+                    document.getElementById('evalProgressPct').innerText = pct + '%';
+                    document.getElementById('evalProgressBar').style.width = pct + '%';
+                    document.getElementById('evalProgressDetails').innerText = statusData.details + ` (${statusData.elapsed_time}s)`;
+
+                    if (statusData.status === 'completed') {
+                        clearInterval(evalPollInterval);
+                        hideEvalProgress();
+                        renderEvalResults(statusData.results);
+                    } else if (statusData.status === 'error') {
+                        clearInterval(evalPollInterval);
+                        hideEvalProgress();
+                        alert("L'évaluation a échoué : " + statusData.error);
+                    }
+                } catch (e) {
+                    console.error("Erreur polling eval status:", e);
+                }
+            }, 1500);
+        }
+
+        function renderEvalResults(results) {
+            if (!results) return;
+            document.getElementById('evalEmptyState').style.display = 'none';
+            document.getElementById('evalResultsContainer').style.display = 'block';
+            renderKpiCards(results.metrics);
+            renderQuestionsTable(results.details);
+        }
+
+        function renderKpiCards(metrics) {
+            const container = document.getElementById('evalKpiCards');
+            container.innerHTML = `
+            <div class="kpi-card" style="background:#fff; padding:16px; border-radius:10px; border:1px solid var(--owl-border); text-align:center;">
+                <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:4px;">GLOBAL RAG SCORE</div>
+                <div style="font-size:22px; font-weight:800; color:var(--owl-red);">${metrics.global_rag_score !== undefined ? metrics.global_rag_score.toFixed(2) : '-'}</div>
+            </div>
+            <div class="kpi-card" style="background:#fff; padding:16px; border-radius:10px; border:1px solid var(--owl-border); text-align:center;">
+                <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:4px;">FAITHFULNESS</div>
+                <div style="font-size:20px; font-weight:700; color:#0f172a;">${metrics.faithfulness !== undefined ? metrics.faithfulness.toFixed(2) : '-'}</div>
+            </div>
+            <div class="kpi-card" style="background:#fff; padding:16px; border-radius:10px; border:1px solid var(--owl-border); text-align:center;">
+                <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:4px;">ANSWER RELEVANCE</div>
+                <div style="font-size:20px; font-weight:700; color:#0f172a;">${metrics.answer_relevance !== undefined ? metrics.answer_relevance.toFixed(2) : '-'}</div>
+            </div>
+            <div class="kpi-card" style="background:#fff; padding:16px; border-radius:10px; border:1px solid var(--owl-border); text-align:center;">
+                <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:4px;">CORRECTNESS</div>
+                <div style="font-size:20px; font-weight:700; color:#0f172a;">${metrics.answer_correctness !== undefined ? metrics.answer_correctness.toFixed(2) : '-'}</div>
+            </div>
+            <div class="kpi-card" style="background:#fff; padding:16px; border-radius:10px; border:1px solid var(--owl-border); text-align:center;">
+                <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:4px;">PRECISION</div>
+                <div style="font-size:20px; font-weight:700; color:#0f172a;">${metrics.context_precision !== undefined ? metrics.context_precision.toFixed(2) : '-'}</div>
+            </div>
+            <div class="kpi-card" style="background:#fff; padding:16px; border-radius:10px; border:1px solid var(--owl-border); text-align:center;">
+                <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:4px;">RECALL</div>
+                <div style="font-size:20px; font-weight:700; color:#0f172a;">${metrics.context_recall !== undefined ? metrics.context_recall.toFixed(2) : '-'}</div>
+            </div>
+            <div class="kpi-card" style="background:#fff; padding:16px; border-radius:10px; border:1px solid var(--owl-border); text-align:center;">
+                <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:4px;">HIT RATE</div>
+                <div style="font-size:20px; font-weight:700; color:#10b981;">${metrics.retrieval_hit_rate !== undefined ? metrics.retrieval_hit_rate + '%' : '-'}</div>
+            </div>
+            <div class="kpi-card" style="background:#fff; padding:16px; border-radius:10px; border:1px solid var(--owl-border); text-align:center;">
+                <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:4px;">AVG LATENCY</div>
+                <div style="font-size:20px; font-weight:700; color:#0f172a;">${metrics.avg_latency !== undefined ? metrics.avg_latency + 's' : '-'}</div>
+            </div>
+        `;
+        }
+
+        function renderQuestionsTable(details) {
+            const tbody = document.getElementById('evalQuestionsTableBody');
+            if (!details || details.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:16px;">Aucun détail disponible.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = details.map(d => `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:10px; max-width:250px;">
+                    <strong>${d.question}</strong><br>
+                    <span style="font-size:11px; color:#64748b;">${d.answer ? d.answer.substring(0, 70) + '...' : ''}</span>
+                </td>
+                <td style="padding:10px;">${d.faithfulness.toFixed(2)}</td>
+                <td style="padding:10px;">${d.answer_relevancy.toFixed(2)}</td>
+                <td style="padding:10px;">${d.answer_correctness.toFixed(2)}</td>
+                <td style="padding:10px;">${d.context_precision.toFixed(2)}</td>
+                <td style="padding:10px;">${d.context_recall.toFixed(2)}</td>
+                <td style="padding:10px; font-weight:bold; color:var(--owl-red);">${d.global_rag_score.toFixed(2)}</td>
+                <td style="padding:10px;">${d.latency.toFixed(2)}s</td>
+                <td style="padding:10px;">
+                    <button class="btn-primary" style="padding:4px 8px; font-size:11px;" onclick="navigateToTrace('${d.query_id}')">
+                        Trace
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        }
+
+        async function checkLastEvalHistory() {
+            try {
+                const res = await authFetch('/api/eval/history');
+                if (!res.ok) return;
+                const history = await res.json();
+                if (history && history.length > 0) {
+                    const latest = history[0];
+                    if (latest.status === 'completed') {
+                        const resDetails = await authFetch(`/api/eval/results/${latest.job_id}`);
+                        if (resDetails.ok) {
+                            const results = await resDetails.json();
+                            renderEvalResults(results, latest.type);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Erreur chargement historique eval:", e);
+            }
+        }
+
+        function navigateToTrace(queryId) {
+            showPage('monitoring');
+            setTimeout(() => {
+                const input = document.getElementById('traceSearchId');
+                if (input) input.value = queryId;
+                if (typeof fetchTrace === 'function') fetchTrace();
+            }, 100);
+        }
+    </script>
+</body>
+
+</html>

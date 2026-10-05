@@ -10,3 +10,5 @@ mlruns/
 .dvc/tmp/
 .dvc/cache/
 .venv_corrupted/
+data/monitoring.db
+*.db
